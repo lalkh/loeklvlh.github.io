@@ -15,20 +15,20 @@
 
 
 
-<meta name="description" content="whctf2017的一道pwn题sandbox，这道题提供了两个可执行文件加一个libc，两个可执行文件是一个vuln，一个sandbox，这是一道通过沙盒去保护vuln不被攻击的题目。 用ida打开vuln：进入80485CB函数：这里s给的空间是48但是输入是直到换行停止，这里就存在了栈溢出。但是这道题目开了CANARY，所以不能直接覆盖到返回地址。注意到这题，s的空间下面就是v5，而v5是控">
+<meta name="description" content="whctf2017的一道pwn题sandbox，这道题提供了两个可执行文件加一个libc，两个可执行文件是一个vuln，一个sandbox，这是一道通过沙盒去保护vuln不被攻击的题目。">
 <meta name="keywords" content="pwn">
 <meta property="og:type" content="article">
 <meta property="og:title" content="pwn学习之三">
 <meta property="og:url" content="http://loeklvlh.top/2019/05/10/pwn学习之三/index.html">
 <meta property="og:site_name" content="loeklvlh&#39;s blog">
-<meta property="og:description" content="whctf2017的一道pwn题sandbox，这道题提供了两个可执行文件加一个libc，两个可执行文件是一个vuln，一个sandbox，这是一道通过沙盒去保护vuln不被攻击的题目。 用ida打开vuln：进入80485CB函数：这里s给的空间是48但是输入是直到换行停止，这里就存在了栈溢出。但是这道题目开了CANARY，所以不能直接覆盖到返回地址。注意到这题，s的空间下面就是v5，而v5是控">
+<meta property="og:description" content="whctf2017的一道pwn题sandbox，这道题提供了两个可执行文件加一个libc，两个可执行文件是一个vuln，一个sandbox，这是一道通过沙盒去保护vuln不被攻击的题目。">
 <meta property="og:locale" content="zh-Hans">
 <meta property="og:image" content="http://loeklvlh.top/2019/05/10/pwn学习之三/1.png">
 <meta property="og:image" content="http://loeklvlh.top/2019/05/10/pwn学习之三/2.png">
-<meta property="og:updated_time" content="2019-05-10T06:02:19.658Z">
+<meta property="og:updated_time" content="2019-05-10T08:03:25.105Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="pwn学习之三">
-<meta name="twitter:description" content="whctf2017的一道pwn题sandbox，这道题提供了两个可执行文件加一个libc，两个可执行文件是一个vuln，一个sandbox，这是一道通过沙盒去保护vuln不被攻击的题目。 用ida打开vuln：进入80485CB函数：这里s给的空间是48但是输入是直到换行停止，这里就存在了栈溢出。但是这道题目开了CANARY，所以不能直接覆盖到返回地址。注意到这题，s的空间下面就是v5，而v5是控">
+<meta name="twitter:description" content="whctf2017的一道pwn题sandbox，这道题提供了两个可执行文件加一个libc，两个可执行文件是一个vuln，一个sandbox，这是一道通过沙盒去保护vuln不被攻击的题目。">
 <meta name="twitter:image" content="http://loeklvlh.top/2019/05/10/pwn学习之三/1.png">
 
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -305,8 +305,7 @@
     <div class="article-entry" itemprop="articleBody">
       
           
-        <p>whctf2017的一道pwn题sandbox，这道题提供了两个可执行文件加一个libc，两个可执行文件是一个vuln，一个sandbox，这是一道通过沙盒去保护vuln不被攻击的题目。</p>
-<p>用ida打开vuln：<br><img src="/2019/05/10/pwn学习之三/1.png" alt="ida"><br>进入80485CB函数：<br><img src="/2019/05/10/pwn学习之三/2.png" alt="ida"><br>这里s给的空间是48但是输入是直到换行停止，这里就存在了栈溢出。但是这道题目开了CANARY，所以不能直接覆盖到返回地址。注意到这题，s的空间下面就是v5，而v5是控制写到s的位置，所以可以通过覆盖v5到返回地址而绕过修改那段Cookie，在不开sandbox的情况下拿shell的办法为：</p>
+        <p>whctf2017的一道pwn题sandbox，这道题提供了两个可执行文件加一个libc，两个可执行文件是一个vuln，一个sandbox，这是一道通过沙盒去保护vuln不被攻击的题目。<br><a id="more"></a><br>用ida打开vuln：<br><img src="/2019/05/10/pwn学习之三/1.png" alt="ida"><br>进入80485CB函数：<br><img src="/2019/05/10/pwn学习之三/2.png" alt="ida"><br>这里s给的空间是48但是输入是直到换行停止，这里就存在了栈溢出。但是这道题目开了CANARY，所以不能直接覆盖到返回地址。注意到这题，s的空间下面就是v5，而v5是控制写到s的位置，所以可以通过覆盖v5到返回地址而绕过修改那段Cookie，在不开sandbox的情况下拿shell的办法为：</p>
 <p>1.覆盖返回地址为puts函数的plt表地址，由于这样跳转少了一个call函数也就是没有push返回地址，所以对于puts函数执行完的返回地址就是进入这个函数时的esp地址的下一个地址，然后再下一个地址就是puts函数的参数，第一次提交’a’*0x30+p8(0x48)+p32(puts_plt)+p32(main_addr)+p32(puts_got)这样就会在执行到函数retn时去执行puts(puts_got)然后再返回到main函数中去。</p>
 <p>2.拿到了puts函数的实际地址再通过libc文件去拿到system函数的实际地址，再到第二次输入把/bin/sh写到内存中去，也就是调用read函数，提交’a’*0x30+p8(0x48)+p32(read_plt)+p32(main_addr)+p32(0)+p32(0x0804a02c),这样在执行完函数时会返回到read函数，接着输入’/bin/sh’就将字符串写到了0x0804a02c里。</p>
 <p>3.最后调用system函数，参数为0x0804a02c即可拿到shell。</p>
@@ -330,7 +329,7 @@
         <p><span>本文标题:</span><a href="/2019/05/10/pwn学习之三/">pwn学习之三</a></p>
         <p><span>文章作者:</span><a href="/" title="回到主页">loeklvlh</a></p>
         <p><span>发布时间:</span>2019-05-10, 13:59:57</p>
-        <p><span>最后更新:</span>2019-05-10, 14:02:19</p>
+        <p><span>最后更新:</span>2019-05-10, 16:03:25</p>
         <p>
             <span>原始链接:</span><a class="post-url" href="/2019/05/10/pwn学习之三/" title="pwn学习之三">http://loeklvlh.top/2019/05/10/pwn学习之三/</a>
             <span class="copy-path" data-clipboard-text="原文: http://loeklvlh.top/2019/05/10/pwn学习之三/　　作者: loeklvlh" title="点击复制文章链接"><i class="fa fa-clipboard"></i></span>

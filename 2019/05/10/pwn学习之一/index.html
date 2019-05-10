@@ -15,22 +15,22 @@
 
 
 
-<meta name="description" content="刚刚开始学习pwn，记录一下自己学习的过程。 今天完成了第一道pwn题目的解答，做的题目是2017年TSCTF的bad egg，通过这道题学习到了一种getshell的方法：通过在大小不够存储shellcode的空间内写入egg_hunter使其去找到真正的shellcode所在的地址执行拿到shell。">
+<meta name="description" content="刚刚开始学习pwn，记录一下自己学习的过程。">
 <meta name="keywords" content="pwn">
 <meta property="og:type" content="article">
 <meta property="og:title" content="pwn学习之一">
 <meta property="og:url" content="http://loeklvlh.top/2019/05/10/pwn学习之一/index.html">
 <meta property="og:site_name" content="loeklvlh&#39;s blog">
-<meta property="og:description" content="刚刚开始学习pwn，记录一下自己学习的过程。 今天完成了第一道pwn题目的解答，做的题目是2017年TSCTF的bad egg，通过这道题学习到了一种getshell的方法：通过在大小不够存储shellcode的空间内写入egg_hunter使其去找到真正的shellcode所在的地址执行拿到shell。">
+<meta property="og:description" content="刚刚开始学习pwn，记录一下自己学习的过程。">
 <meta property="og:locale" content="zh-Hans">
 <meta property="og:image" content="http://loeklvlh.top/2019/05/10/pwn学习之一/1.png">
 <meta property="og:image" content="http://loeklvlh.top/2019/05/10/pwn学习之一/2.png">
 <meta property="og:image" content="http://loeklvlh.top/2019/05/10/pwn学习之一/3.png">
 <meta property="og:image" content="http://loeklvlh.top/2019/05/10/pwn学习之一/4.png">
-<meta property="og:updated_time" content="2019-05-10T07:59:46.739Z">
+<meta property="og:updated_time" content="2019-05-10T08:03:11.902Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="pwn学习之一">
-<meta name="twitter:description" content="刚刚开始学习pwn，记录一下自己学习的过程。 今天完成了第一道pwn题目的解答，做的题目是2017年TSCTF的bad egg，通过这道题学习到了一种getshell的方法：通过在大小不够存储shellcode的空间内写入egg_hunter使其去找到真正的shellcode所在的地址执行拿到shell。">
+<meta name="twitter:description" content="刚刚开始学习pwn，记录一下自己学习的过程。">
 <meta name="twitter:image" content="http://loeklvlh.top/2019/05/10/pwn学习之一/1.png">
 
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -307,8 +307,8 @@
     <div class="article-entry" itemprop="articleBody">
       
           
-        <p>刚刚开始学习pwn，记录一下自己学习的过程。</p>
-<p>今天完成了第一道pwn题目的解答，做的题目是2017年TSCTF的bad egg，通过这道题学习到了一种getshell的方法：通过在大小不够存储shellcode的空间内写入egg_hunter使其去找到真正的shellcode所在的地址执行拿到shell。<br><a id="more"></a></p>
+        <p>刚刚开始学习pwn，记录一下自己学习的过程。<br><a id="more"></a></p>
+<p>今天完成了第一道pwn题目的解答，做的题目是2017年TSCTF的bad egg，通过这道题学习到了一种getshell的方法：通过在大小不够存储shellcode的空间内写入egg_hunter使其去找到真正的shellcode所在的地址执行拿到shell。</p>
 <p>首先拿到题目用ida去查看：<br><img src="/2019/05/10/pwn学习之一/1.png" alt="ida"></p>
 <p>题目首先通过sub_8B0()生成了一个1000以内的随机数用来给dword_305C申请地址，这里用的malloc申请的地址是存在在堆中的，然后题目会把申请到的这块地址的首地址输出出来，接着又会在堆中申请一个256大小的空间(这里会是后面用来存放shellcode的位置)，接着执行sub_9AB()函数。</p>
 <p>　　进入sub_9AB()函数：<br><img src="/2019/05/10/pwn学习之一/2.png" alt="ida"><br>这个函数逻辑是先申请了int buf,int v2,char haystack[4]，这些申请的空间是存在在栈中的，首先要你输入treat or trick?，只有输入treat才会继续执行下面的代码，接着程序会把申请的haystack所在的栈地址告诉你，接下来输入name到haystack，这里read给的max位32位，而haystack只申请的4个字节的空间，所以在这里存在栈溢出，接着是往之前堆中申请的256大小的地址写入数据，然后程序结束。</p>
@@ -332,7 +332,7 @@
         <p><span>本文标题:</span><a href="/2019/05/10/pwn学习之一/">pwn学习之一</a></p>
         <p><span>文章作者:</span><a href="/" title="回到主页">loeklvlh</a></p>
         <p><span>发布时间:</span>2019-05-10, 13:29:52</p>
-        <p><span>最后更新:</span>2019-05-10, 15:59:46</p>
+        <p><span>最后更新:</span>2019-05-10, 16:03:11</p>
         <p>
             <span>原始链接:</span><a class="post-url" href="/2019/05/10/pwn学习之一/" title="pwn学习之一">http://loeklvlh.top/2019/05/10/pwn学习之一/</a>
             <span class="copy-path" data-clipboard-text="原文: http://loeklvlh.top/2019/05/10/pwn学习之一/　　作者: loeklvlh" title="点击复制文章链接"><i class="fa fa-clipboard"></i></span>

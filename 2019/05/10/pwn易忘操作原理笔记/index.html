@@ -15,21 +15,21 @@
 
 
 
-<meta name="description" content="堆溢出漏洞： 一、null-byte-off-by-one 漏洞原理：由于输入操作失误，导致可以把size最低字节修改为\x00，overlapchunk利用。 构造1.freeB，此时C的presize被修改为B的大小 2.通过A的null-byte-off-by-one漏洞修改B的size大小，malloc b1,b2两个块，此时由于通过B的size去找下一个堆块的presize位置来修改，B">
+<meta name="description" content="堆溢出漏洞： 一、null-byte-off-by-one 漏洞原理：由于输入操作失误，导致可以把size最低字节修改为\x00，overlapchunk利用。">
 <meta name="keywords" content="pwn">
 <meta property="og:type" content="article">
 <meta property="og:title" content="pwn易忘操作原理笔记">
 <meta property="og:url" content="http://loeklvlh.top/2019/05/10/pwn易忘操作原理笔记/index.html">
 <meta property="og:site_name" content="loeklvlh&#39;s blog">
-<meta property="og:description" content="堆溢出漏洞： 一、null-byte-off-by-one 漏洞原理：由于输入操作失误，导致可以把size最低字节修改为\x00，overlapchunk利用。 构造1.freeB，此时C的presize被修改为B的大小 2.通过A的null-byte-off-by-one漏洞修改B的size大小，malloc b1,b2两个块，此时由于通过B的size去找下一个堆块的presize位置来修改，B">
+<meta property="og:description" content="堆溢出漏洞： 一、null-byte-off-by-one 漏洞原理：由于输入操作失误，导致可以把size最低字节修改为\x00，overlapchunk利用。">
 <meta property="og:locale" content="zh-Hans">
 <meta property="og:image" content="http://loeklvlh.top/2019/05/10/pwn易忘操作原理笔记/1.png">
 <meta property="og:image" content="http://loeklvlh.top/2019/05/10/pwn易忘操作原理笔记/2.png">
 <meta property="og:image" content="http://loeklvlh.top/2019/05/10/pwn易忘操作原理笔记/3.png">
-<meta property="og:updated_time" content="2019-05-10T06:16:19.126Z">
+<meta property="og:updated_time" content="2019-05-10T08:03:39.321Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="pwn易忘操作原理笔记">
-<meta name="twitter:description" content="堆溢出漏洞： 一、null-byte-off-by-one 漏洞原理：由于输入操作失误，导致可以把size最低字节修改为\x00，overlapchunk利用。 构造1.freeB，此时C的presize被修改为B的大小 2.通过A的null-byte-off-by-one漏洞修改B的size大小，malloc b1,b2两个块，此时由于通过B的size去找下一个堆块的presize位置来修改，B">
+<meta name="twitter:description" content="堆溢出漏洞： 一、null-byte-off-by-one 漏洞原理：由于输入操作失误，导致可以把size最低字节修改为\x00，overlapchunk利用。">
 <meta name="twitter:image" content="http://loeklvlh.top/2019/05/10/pwn易忘操作原理笔记/1.png">
 
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -308,8 +308,7 @@
           
         <p>堆溢出漏洞：</p>
 <p>一、null-byte-off-by-one</p>
-<p>漏洞原理：由于输入操作失误，导致可以把size最低字节修改为\x00，overlapchunk利用。</p>
-<p>构造<br><img src="/2019/05/10/pwn易忘操作原理笔记/1.png" alt="ida"><br>1.freeB，此时C的presize被修改为B的大小</p>
+<p>漏洞原理：由于输入操作失误，导致可以把size最低字节修改为\x00，overlapchunk利用。<br><a id="more"></a><br>构造<br><img src="/2019/05/10/pwn易忘操作原理笔记/1.png" alt="ida"><br>1.freeB，此时C的presize被修改为B的大小</p>
 <p>2.通过A的null-byte-off-by-one漏洞修改B的size大小，malloc b1,b2两个块，此时由于通过B的size去找下一个堆块的presize位置来修改，B的size被改动后，C的presize无法得到更新仍然是B的原来大小。<br><img src="/2019/05/10/pwn易忘操作原理笔记/2.png" alt="ida"><br>3.free b1，free C，free C的时候通过presize找到b1的位置判断b1未使用所以发生unlink合并。</p>
 <p>4.申请一个大的chunk就可以覆盖到b2堆块。</p>
 <p>二、ret2dl-runtime-resolve</p>
@@ -342,7 +341,7 @@
         <p><span>本文标题:</span><a href="/2019/05/10/pwn易忘操作原理笔记/">pwn易忘操作原理笔记</a></p>
         <p><span>文章作者:</span><a href="/" title="回到主页">loeklvlh</a></p>
         <p><span>发布时间:</span>2019-05-10, 14:13:43</p>
-        <p><span>最后更新:</span>2019-05-10, 14:16:19</p>
+        <p><span>最后更新:</span>2019-05-10, 16:03:39</p>
         <p>
             <span>原始链接:</span><a class="post-url" href="/2019/05/10/pwn易忘操作原理笔记/" title="pwn易忘操作原理笔记">http://loeklvlh.top/2019/05/10/pwn易忘操作原理笔记/</a>
             <span class="copy-path" data-clipboard-text="原文: http://loeklvlh.top/2019/05/10/pwn易忘操作原理笔记/　　作者: loeklvlh" title="点击复制文章链接"><i class="fa fa-clipboard"></i></span>

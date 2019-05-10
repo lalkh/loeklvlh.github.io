@@ -15,18 +15,18 @@
 
 
 
-<meta name="description" content="因为论文关系要用到pyspark，具体情形如下： 有一个list=[‘aaa’,’bbb’,’ccc’,’ddd’]，然后有一个rdd内数据类型是str，eg:’abcdefg’，正常如果是需要筛选数组包含的rdd数据可以定义一个broadcast，然后写成：123broadcastvalue = sc.broadcast(list)rdd.filter(lambda x:x in broadca">
+<meta name="description" content="因为论文关系要用到pyspark，具体情形如下： 有一个list=[‘aaa’,’bbb’,’ccc’,’ddd’]，然后有一个rdd内数据类型是str，eg:’abcdefg’，正常如果是需要筛选数组包含的rdd数据可以定义一个broadcast，然后写成：">
 <meta name="keywords" content="spark">
 <meta property="og:type" content="article">
 <meta property="og:title" content="pyspark如何遍历broadcast">
 <meta property="og:url" content="http://loeklvlh.top/2019/05/10/pyspark如何遍历broadcast/index.html">
 <meta property="og:site_name" content="loeklvlh&#39;s blog">
-<meta property="og:description" content="因为论文关系要用到pyspark，具体情形如下： 有一个list=[‘aaa’,’bbb’,’ccc’,’ddd’]，然后有一个rdd内数据类型是str，eg:’abcdefg’，正常如果是需要筛选数组包含的rdd数据可以定义一个broadcast，然后写成：123broadcastvalue = sc.broadcast(list)rdd.filter(lambda x:x in broadca">
+<meta property="og:description" content="因为论文关系要用到pyspark，具体情形如下： 有一个list=[‘aaa’,’bbb’,’ccc’,’ddd’]，然后有一个rdd内数据类型是str，eg:’abcdefg’，正常如果是需要筛选数组包含的rdd数据可以定义一个broadcast，然后写成：">
 <meta property="og:locale" content="zh-Hans">
-<meta property="og:updated_time" content="2019-05-10T06:19:41.166Z">
+<meta property="og:updated_time" content="2019-05-10T08:03:44.996Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="pyspark如何遍历broadcast">
-<meta name="twitter:description" content="因为论文关系要用到pyspark，具体情形如下： 有一个list=[‘aaa’,’bbb’,’ccc’,’ddd’]，然后有一个rdd内数据类型是str，eg:’abcdefg’，正常如果是需要筛选数组包含的rdd数据可以定义一个broadcast，然后写成：123broadcastvalue = sc.broadcast(list)rdd.filter(lambda x:x in broadca">
+<meta name="twitter:description" content="因为论文关系要用到pyspark，具体情形如下： 有一个list=[‘aaa’,’bbb’,’ccc’,’ddd’]，然后有一个rdd内数据类型是str，eg:’abcdefg’，正常如果是需要筛选数组包含的rdd数据可以定义一个broadcast，然后写成：">
 
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 
@@ -303,7 +303,7 @@
       
           
         <p>因为论文关系要用到pyspark，具体情形如下：</p>
-<p>有一个list=[‘aaa’,’bbb’,’ccc’,’ddd’]，然后有一个rdd内数据类型是str，eg:’abcdefg’，正常如果是需要筛选数组包含的rdd数据可以定义一个broadcast，然后写成：<br><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">broadcastvalue = sc.broadcast(list)</span><br><span class="line"></span><br><span class="line">rdd.filter(<span class="keyword">lambda</span> x:x <span class="keyword">in</span> broadcastvalue.value).collect()</span><br></pre></td></tr></table></figure></p>
+<p>有一个list=[‘aaa’,’bbb’,’ccc’,’ddd’]，然后有一个rdd内数据类型是str，eg:’abcdefg’，正常如果是需要筛选数组包含的rdd数据可以定义一个broadcast，然后写成：<br><a id="more"></a><br><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">broadcastvalue = sc.broadcast(list)</span><br><span class="line"></span><br><span class="line">rdd.filter(<span class="keyword">lambda</span> x:x <span class="keyword">in</span> broadcastvalue.value).collect()</span><br></pre></td></tr></table></figure></p>
 <p>我的需求是要筛选str中包含有list中任意一个数据的那些数据,eg:如果str =’aaaxxxxxx’，因为list[0]=’aaa’ in str，所以这个数据是我需要的，开始时尝试写成：<br><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">choice</span><span class="params">(data,list)</span>:</span></span><br><span class="line">    <span class="keyword">for</span> i <span class="keyword">in</span> list:</span><br><span class="line">        <span class="keyword">if</span> i <span class="keyword">in</span> data:</span><br><span class="line">            <span class="keyword">return</span> <span class="literal">True</span></span><br><span class="line">    <span class="keyword">return</span> <span class="literal">False</span></span><br><span class="line">broadcastvalue = sc.broadcast(list)</span><br><span class="line">rdd.filter(<span class="keyword">lambda</span> x:choice(x,broadcastvalue.value)).collect()</span><br></pre></td></tr></table></figure></p>
 <p>但是这样会报错broadcast is not iterable，这是说明broadcast是一个不可迭代的对象，搜索无果后想到了解决方案，竟然不可以迭代那么我就用非迭代的方式遍历就行了：<br><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">choice</span><span class="params">(data,list)</span>:</span></span><br><span class="line">    <span class="keyword">for</span> i <span class="keyword">in</span> range(len(list)):</span><br><span class="line">        <span class="keyword">if</span> list[i] <span class="keyword">in</span> data:</span><br><span class="line">            <span class="keyword">return</span> <span class="literal">True</span></span><br><span class="line">    <span class="keyword">return</span> <span class="literal">False</span></span><br><span class="line">broadcastvalue = sc.broadcast(list)</span><br><span class="line">rdd.filter(<span class="keyword">lambda</span> x:choice(x,broadcastvalue.value)).collect()</span><br></pre></td></tr></table></figure></p>
 <p>其实修改很简单，只是不再用它作为一个迭代对象来遍历了。</p>
@@ -325,7 +325,7 @@
         <p><span>本文标题:</span><a href="/2019/05/10/pyspark如何遍历broadcast/">pyspark如何遍历broadcast</a></p>
         <p><span>文章作者:</span><a href="/" title="回到主页">loeklvlh</a></p>
         <p><span>发布时间:</span>2019-05-10, 14:17:01</p>
-        <p><span>最后更新:</span>2019-05-10, 14:19:41</p>
+        <p><span>最后更新:</span>2019-05-10, 16:03:44</p>
         <p>
             <span>原始链接:</span><a class="post-url" href="/2019/05/10/pyspark如何遍历broadcast/" title="pyspark如何遍历broadcast">http://loeklvlh.top/2019/05/10/pyspark如何遍历broadcast/</a>
             <span class="copy-path" data-clipboard-text="原文: http://loeklvlh.top/2019/05/10/pyspark如何遍历broadcast/　　作者: loeklvlh" title="点击复制文章链接"><i class="fa fa-clipboard"></i></span>

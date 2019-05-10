@@ -15,22 +15,22 @@
 
 
 
-<meta name="description" content="刚刚开始学习pwn，记录一下自己学习的过程。 今天get了第二道pwn题目的解答，做的题目是2017年TSCTF的easy fsb，通过这道题了解了一种漏洞和使用该漏洞获取shell的方法：即格式化字符串漏洞，通过找到printf的got表改为system的got表，从而让执行printf函数变成执行system函数再传入/bin/sh参数，从而让程序执行system(‘/bin/sh’)获取sh">
+<meta name="description" content="刚刚开始学习pwn，记录一下自己学习的过程。">
 <meta name="keywords" content="pwn">
 <meta property="og:type" content="article">
 <meta property="og:title" content="pwn学习之二">
 <meta property="og:url" content="http://loeklvlh.top/2019/05/10/pwn学习之二/index.html">
 <meta property="og:site_name" content="loeklvlh&#39;s blog">
-<meta property="og:description" content="刚刚开始学习pwn，记录一下自己学习的过程。 今天get了第二道pwn题目的解答，做的题目是2017年TSCTF的easy fsb，通过这道题了解了一种漏洞和使用该漏洞获取shell的方法：即格式化字符串漏洞，通过找到printf的got表改为system的got表，从而让执行printf函数变成执行system函数再传入/bin/sh参数，从而让程序执行system(‘/bin/sh’)获取sh">
+<meta property="og:description" content="刚刚开始学习pwn，记录一下自己学习的过程。">
 <meta property="og:locale" content="zh-Hans">
 <meta property="og:image" content="http://loeklvlh.top/2019/05/10/pwn学习之二/1.png">
 <meta property="og:image" content="http://loeklvlh.top/2019/05/10/pwn学习之二/2.png">
 <meta property="og:image" content="http://loeklvlh.top/2019/05/10/pwn学习之二/3.png">
 <meta property="og:image" content="http://loeklvlh.top/2019/05/10/pwn学习之二/4.png">
-<meta property="og:updated_time" content="2019-05-10T05:59:41.552Z">
+<meta property="og:updated_time" content="2019-05-10T08:03:20.626Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="pwn学习之二">
-<meta name="twitter:description" content="刚刚开始学习pwn，记录一下自己学习的过程。 今天get了第二道pwn题目的解答，做的题目是2017年TSCTF的easy fsb，通过这道题了解了一种漏洞和使用该漏洞获取shell的方法：即格式化字符串漏洞，通过找到printf的got表改为system的got表，从而让执行printf函数变成执行system函数再传入/bin/sh参数，从而让程序执行system(‘/bin/sh’)获取sh">
+<meta name="twitter:description" content="刚刚开始学习pwn，记录一下自己学习的过程。">
 <meta name="twitter:image" content="http://loeklvlh.top/2019/05/10/pwn学习之二/1.png">
 
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -307,8 +307,7 @@
     <div class="article-entry" itemprop="articleBody">
       
           
-        <p>刚刚开始学习pwn，记录一下自己学习的过程。</p>
-<p>今天get了第二道pwn题目的解答，做的题目是2017年TSCTF的easy fsb，通过这道题了解了一种漏洞和使用该漏洞获取shell的方法：即格式化字符串漏洞，通过找到printf的got表改为system的got表，从而让执行printf函数变成执行system函数再传入/bin/sh参数，从而让程序执行system(‘/bin/sh’)获取shell。</p>
+        <p>刚刚开始学习pwn，记录一下自己学习的过程。<br><a id="more"></a><br>今天get了第二道pwn题目的解答，做的题目是2017年TSCTF的easy fsb，通过这道题了解了一种漏洞和使用该漏洞获取shell的方法：即格式化字符串漏洞，通过找到printf的got表改为system的got表，从而让执行printf函数变成执行system函数再传入/bin/sh参数，从而让程序执行system(‘/bin/sh’)获取shell。</p>
 <p>打开ida查看：<br><img src="/2019/05/10/pwn学习之二/1.png" alt="ida"><br>程序逻辑就是执行getname()函数。</p>
 <p>　　进入getname()函数：<br><img src="/2019/05/10/pwn学习之二/2.png" alt="ida"><br>逻辑就是往buf里面写数据然后printf出来，这里由于printf()函数直接调用了buf作为参数，所以存在格式化字符串漏洞。</p>
 <p>格式化字符串漏洞介绍：<a href="http://www.cnblogs.com/Ox9A82/p/5429099.html，http://blog.csdn.net/prettyday/article/details/50366608。" target="_blank" rel="noopener">http://www.cnblogs.com/Ox9A82/p/5429099.html，http://blog.csdn.net/prettyday/article/details/50366608。</a></p>
@@ -336,7 +335,7 @@
         <p><span>本文标题:</span><a href="/2019/05/10/pwn学习之二/">pwn学习之二</a></p>
         <p><span>文章作者:</span><a href="/" title="回到主页">loeklvlh</a></p>
         <p><span>发布时间:</span>2019-05-10, 13:50:46</p>
-        <p><span>最后更新:</span>2019-05-10, 13:59:41</p>
+        <p><span>最后更新:</span>2019-05-10, 16:03:20</p>
         <p>
             <span>原始链接:</span><a class="post-url" href="/2019/05/10/pwn学习之二/" title="pwn学习之二">http://loeklvlh.top/2019/05/10/pwn学习之二/</a>
             <span class="copy-path" data-clipboard-text="原文: http://loeklvlh.top/2019/05/10/pwn学习之二/　　作者: loeklvlh" title="点击复制文章链接"><i class="fa fa-clipboard"></i></span>
