@@ -15,13 +15,13 @@
 
 
 
-<meta name="description" content="这次参加比赛总共出了三道，有两道队友都先交了，还是tcl，heap_master卡了差不多一天没解决。。。。还是记录一下出的题目吧 ##quicksort题目大体流程就是输入要输入的数字数量，然后输入数字，经过一个快速排序输出，然后结束。漏洞： gets函数这里存在栈溢出，可以覆盖i,j,ptr,num。 利用思路： libc泄露：可以修改ptr指向gets_got，并将i和num设置为1,1。这">
+<meta name="description" content="这次参加比赛总共出了三道，有两道队友都先交了，还是tcl，heap_master卡了差不多一天没解决。。。。还是记录一下出的题目吧">
 <meta name="keywords" content="pwn">
 <meta property="og:type" content="article">
 <meta property="og:title" content="*CTF 2019 quicksort、babyshell、upxofcpp">
 <meta property="og:url" content="http://loeklvlh.top/2019/05/10/CTF-2019-quicksort、babyshell、upxofcpp/index.html">
 <meta property="og:site_name" content="loeklvlh&#39;s blog">
-<meta property="og:description" content="这次参加比赛总共出了三道，有两道队友都先交了，还是tcl，heap_master卡了差不多一天没解决。。。。还是记录一下出的题目吧 ##quicksort题目大体流程就是输入要输入的数字数量，然后输入数字，经过一个快速排序输出，然后结束。漏洞： gets函数这里存在栈溢出，可以覆盖i,j,ptr,num。 利用思路： libc泄露：可以修改ptr指向gets_got，并将i和num设置为1,1。这">
+<meta property="og:description" content="这次参加比赛总共出了三道，有两道队友都先交了，还是tcl，heap_master卡了差不多一天没解决。。。。还是记录一下出的题目吧">
 <meta property="og:locale" content="zh-Hans">
 <meta property="og:image" content="http://loeklvlh.top/2019/05/10/CTF-2019-quicksort、babyshell、upxofcpp/1.png">
 <meta property="og:image" content="http://loeklvlh.top/2019/05/10/CTF-2019-quicksort、babyshell、upxofcpp/2.png">
@@ -30,10 +30,10 @@
 <meta property="og:image" content="http://loeklvlh.top/2019/05/10/CTF-2019-quicksort、babyshell、upxofcpp/5.png">
 <meta property="og:image" content="http://loeklvlh.top/2019/05/10/CTF-2019-quicksort、babyshell、upxofcpp/6.png">
 <meta property="og:image" content="http://loeklvlh.top/2019/05/10/CTF-2019-quicksort、babyshell、upxofcpp/7.png">
-<meta property="og:updated_time" content="2019-05-10T06:29:07.179Z">
+<meta property="og:updated_time" content="2019-05-10T08:01:54.126Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="*CTF 2019 quicksort、babyshell、upxofcpp">
-<meta name="twitter:description" content="这次参加比赛总共出了三道，有两道队友都先交了，还是tcl，heap_master卡了差不多一天没解决。。。。还是记录一下出的题目吧 ##quicksort题目大体流程就是输入要输入的数字数量，然后输入数字，经过一个快速排序输出，然后结束。漏洞： gets函数这里存在栈溢出，可以覆盖i,j,ptr,num。 利用思路： libc泄露：可以修改ptr指向gets_got，并将i和num设置为1,1。这">
+<meta name="twitter:description" content="这次参加比赛总共出了三道，有两道队友都先交了，还是tcl，heap_master卡了差不多一天没解决。。。。还是记录一下出的题目吧">
 <meta name="twitter:image" content="http://loeklvlh.top/2019/05/10/CTF-2019-quicksort、babyshell、upxofcpp/1.png">
 
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -310,7 +310,7 @@
     <div class="article-entry" itemprop="articleBody">
       
           
-        <p>这次参加比赛总共出了三道，有两道队友都先交了，还是tcl，heap_master卡了差不多一天没解决。。。。还是记录一下出的题目吧</p>
+        <p>这次参加比赛总共出了三道，有两道队友都先交了，还是tcl，heap_master卡了差不多一天没解决。。。。还是记录一下出的题目吧<br><a id="more"></a></p>
 <p>##quicksort<br><img src="/2019/05/10/CTF-2019-quicksort、babyshell、upxofcpp/1.png" alt="ida"><br><img src="/2019/05/10/CTF-2019-quicksort、babyshell、upxofcpp/2.png" alt="ida"><br>题目大体流程就是输入要输入的数字数量，然后输入数字，经过一个快速排序输出，然后结束。<br>漏洞：</p>
 <p>gets函数这里存在栈溢出，可以覆盖i,j,ptr,num。</p>
 <p>利用思路：</p>
@@ -342,7 +342,7 @@
         <p><span>本文标题:</span><a href="/2019/05/10/CTF-2019-quicksort、babyshell、upxofcpp/">*CTF 2019 quicksort、babyshell、upxofcpp</a></p>
         <p><span>文章作者:</span><a href="/" title="回到主页">loeklvlh</a></p>
         <p><span>发布时间:</span>2019-05-10, 14:24:28</p>
-        <p><span>最后更新:</span>2019-05-10, 14:29:07</p>
+        <p><span>最后更新:</span>2019-05-10, 16:01:54</p>
         <p>
             <span>原始链接:</span><a class="post-url" href="/2019/05/10/CTF-2019-quicksort、babyshell、upxofcpp/" title="*CTF 2019 quicksort、babyshell、upxofcpp">http://loeklvlh.top/2019/05/10/CTF-2019-quicksort、babyshell、upxofcpp/</a>
             <span class="copy-path" data-clipboard-text="原文: http://loeklvlh.top/2019/05/10/CTF-2019-quicksort、babyshell、upxofcpp/　　作者: loeklvlh" title="点击复制文章链接"><i class="fa fa-clipboard"></i></span>
